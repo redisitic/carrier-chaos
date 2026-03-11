@@ -6,8 +6,8 @@ import { BIOMES } from "../../game/mapConfig";
 export default function DeliveryMarker({ order, position }) {
     const markerRef = useRef();
     const ringRef = useRef();
-    const terrain = order.destinationTerrain;
-    const biome = BIOMES[terrain];
+    const zone = order.zone;
+    const biome = BIOMES[zone];
     const color = biome?.color || "#6366f1";
 
     // Floating / pulsing animation

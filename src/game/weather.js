@@ -23,19 +23,19 @@ export function getNextWeather(currentType) {
 }
 
 /**
- * Get the delivery time multiplier for current weather + terrain.
- * Fog only affects Waterway, Wind only affects Mountain.
+ * Get the delivery time multiplier for current weather + destination zone.
+ * Terrain-specific effects now apply to zones (e.g., "India Rural" for monsoon).
  */
-export function getWeatherMultiplier(weather, terrain) {
+export function getWeatherMultiplier(weather, zone) {
     if (!weather) return 1.0;
 
-    // If weather has a terrain-specific effect, only apply full multiplier to that terrain
+    // If weather has a zone-specific effect, apply full multiplier to that zone
     if (weather.terrainEffect) {
-        if (terrain === weather.terrainEffect) {
+        if (zone === weather.terrainEffect) {
             return weather.deliveryMultiplier;
         }
-        // Partial effect on other terrains
-        return 1.0 + (weather.deliveryMultiplier - 1.0) * 0.3;
+        // Partial effect on other zones
+        return 1.0 + (weather.deliveryMultiplier - 1.0) * 0.25;
     }
 
     return weather.deliveryMultiplier;
@@ -44,6 +44,6 @@ export function getWeatherMultiplier(weather, terrain) {
 /**
  * Check if weather should change at this game minute.
  */
-export function shouldWeatherChange(gameMinutes) {
-    return gameMinutes > 0 && gameMinutes % WEATHER_CHANGE_INTERVAL === 0;
+export function shouldWeatherChange(gameMinutes, lastWeatherChange) {
+    return (gameMinutes - lastWeatherChange) >= WEATHER_CHANGE_INTERVAL;
 }

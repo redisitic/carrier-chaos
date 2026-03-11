@@ -6,7 +6,7 @@ import LeaderboardScreen from "./LeaderboardScreen";
 
 export default function GameOverScreen() {
   const { state, dispatch } = useGame();
-  const { phase, points, xp, stats } = state;
+  const { phase, points, money, xp, stats } = state;
   const { level, title } = xpLevel(xp);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
@@ -37,7 +37,7 @@ export default function GameOverScreen() {
             <span className="go-stat-label">Final Score</span>
           </div>
           <div className="go-stat">
-            <span className="go-stat-val">${money}</span>
+            <span className="go-stat-val">₹{money?.toLocaleString()}</span>
             <span className="go-stat-label">Funds Remaining</span>
           </div>
           <div className="go-stat">
@@ -53,8 +53,8 @@ export default function GameOverScreen() {
             <span className="go-stat-label">Delivered</span>
           </div>
           <div className="go-stat">
-            <span className="go-stat-val">{stats.totalAnomalies}</span>
-            <span className="go-stat-label">Anomalies</span>
+            <span className="go-stat-val">{stats.totalExpired}</span>
+            <span className="go-stat-label">Expired</span>
           </div>
         </div>
 

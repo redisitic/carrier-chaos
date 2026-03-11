@@ -94,8 +94,8 @@ export default function HUD() {
       <div className="hud-bar">
         <div className="hud-stat">
           <span className="stat-label">Funds</span>
-          <span className={`stat-value ${money < 100 ? "danger" : money < 300 ? "warning" : "good"}`}>
-            ${money}
+          <span className={`stat-value ${money < 2000 ? "danger" : money < 5000 ? "warning" : "good"}`}>
+            ₹{money.toLocaleString()}
           </span>
         </div>
         <div className="hud-stat">
@@ -108,7 +108,7 @@ export default function HUD() {
         </div>
         <div className="hud-divider" />
         <div className="hud-stat">
-          <span className="stat-label">Completed</span>
+          <span className="stat-label">Delivered</span>
           <span className="stat-value">{stats.totalDelivered}</span>
         </div>
         <div className="hud-stat">
@@ -120,9 +120,9 @@ export default function HUD() {
           <span className="stat-value">{warehouseQueue.length}</span>
         </div>
         <div className="hud-stat">
-          <span className="stat-label">Anomalies</span>
-          <span className={`stat-value ${stats.totalAnomalies > 0 ? "warning" : ""}`}>
-            {stats.totalAnomalies}
+          <span className="stat-label">Expired</span>
+          <span className={`stat-value ${stats.totalExpired > 0 ? "warning" : ""}`}>
+            {stats.totalExpired}
           </span>
         </div>
         <div className="hud-stat">

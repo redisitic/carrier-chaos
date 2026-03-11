@@ -9,21 +9,22 @@ import { CARRIER_3D, WAREHOUSE_POS, getDeliveryPosition } from "../../game/mapCo
 export function ActiveDelivery({ delivery }) {
     const groupRef = useRef();
     const carrierName = delivery.deliveryResult?.carrierName;
-    const carrierConfig = CARRIER_3D[carrierName] || CARRIER_3D.CityExpress;
+    const carrierConfig = CARRIER_3D[carrierName] || { bodyColor: "#6366f1", scale: 0.5, type: "truck" };
 
     // Compute destination once per delivery
     const destination = useMemo(
-        () => getDeliveryPosition(delivery.destinationTerrain),
-        [delivery.id, delivery.destinationTerrain]
+        () => getDeliveryPosition(delivery.zone),
+        [delivery.id, delivery.zone]
     );
-
-    const totalDuration = delivery.deliveryResult?.durationHours || 1;
 
     useFrame(() => {
         if (!groupRef.current) return;
 
         // Calculate progress (0 = at warehouse, 1 = at destination)
-        const progress = Math.max(0, Math.min(1, 1 - delivery.remainingHours / totalDuration));
+        const totalDuration = delivery.deliveryResult?.durationHours || 1;
+        const trackingTimeline = delivery.trackingTimeline || [];
+        const triggeredCount = trackingTimeline.filter(e => e.triggered).length;
+        const progress = Math.max(0, Math.min(1, triggeredCount / Math.max(1, trackingTimeline.length)));
 
         // Lerp position from warehouse to destination
         const x = WAREHOUSE_POS[0] + (destination[0] - WAREHOUSE_POS[0]) * progress;
@@ -68,7 +69,7 @@ export function ActiveDelivery({ delivery }) {
                         #{delivery.id}
                     </span>
                     <span style={{ color: "#94a3b8", fontSize: "9px", marginLeft: "4px" }}>
-                        {delivery.remainingHours.toFixed(1)}h
+                        {delivery.deliveryResult?.sla || ""}
                     </span>
                 </div>
             </Html>
@@ -79,11 +80,11 @@ export function ActiveDelivery({ delivery }) {
 // ── Delivery path line from warehouse to destination ─────────────────────────
 export function DeliveryPath({ delivery }) {
     const carrierName = delivery.deliveryResult?.carrierName;
-    const carrierConfig = CARRIER_3D[carrierName] || CARRIER_3D.CityExpress;
+    const carrierConfig = CARRIER_3D[carrierName] || { bodyColor: "#6366f1", scale: 0.5, type: "truck" };
 
     const destination = useMemo(
-        () => getDeliveryPosition(delivery.destinationTerrain),
-        [delivery.id, delivery.destinationTerrain]
+        () => getDeliveryPosition(delivery.zone),
+        [delivery.id, delivery.zone]
     );
 
     const points = useMemo(() => {

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { GameProvider, useGame } from "./context/GameContext";
 import HUD from "./components/HUD";
 import StartScreen from "./components/StartScreen";
@@ -7,7 +7,7 @@ import CarrierSelectionScreen from "./components/CarrierSelectionScreen";
 import TrackingScreen from "./components/TrackingScreen";
 import StatsScreen from "./components/StatsScreen";
 import GameOverScreen from "./components/GameOverScreen";
-import Map3D from "./components/Map3D/Map3D";
+const MapboxMap = lazy(() => import("./components/Map3D/MapboxMap"));
 import "./App.css";
 
 function GameRouter() {
@@ -39,8 +39,8 @@ function GameRouter() {
         {screen === "tracking" && <TrackingScreen />}
         {screen === "stats" && <StatsScreen />}
         {screen === "map" && (
-          <Suspense fallback={<div className="screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading 3D Map...</div>}>
-            <Map3D />
+          <Suspense fallback={<div className="screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading Map...</div>}>
+            <MapboxMap />
           </Suspense>
         )}
       </main>

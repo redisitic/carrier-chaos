@@ -1,63 +1,156 @@
+import { useState } from "react";
 import { useGame } from "../context/GameContext";
-import { CarrierBadgeAnimated } from "./AnimatedCarrier";
+import { TRACKING_EVENTS, CARRIERS } from "../game/constants";
 
-const TERRAIN_ICONS = {
-  Urban: "🏙️",
-  Rugged: "🪨",
-  Waterway: "🌊",
-  Mountain: "⛰️",
-};
+const EVENT_MAP = {};
+TRACKING_EVENTS.forEach((e) => { EVENT_MAP[e.code] = e; });
 
-function ProgressBar({ value }) {
-  // value between 0 and 1
-  const pct = Math.max(0, Math.min(100, (1 - value) * 100));
-  const color = pct > 70 ? "#22c55e" : pct > 35 ? "#f59e0b" : "#ef4444";
-  return (
-    <div className="progress-track">
-      <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
-    </div>
-  );
+function getCarrierInfo(name) {
+  return CARRIERS.find((c) => c.name === name) || { icon: "📦", color: "#64748b" };
 }
+
+const FILTERS = [
+  { key: "all", label: "All", icon: "📋" },
+  { key: "active", label: "In Transit", icon: "🚛" },
+  { key: "delivered", label: "Delivered", icon: "✅" },
+  { key: "failed", label: "Failed", icon: "❌" },
+  { key: "expired", label: "Expired", icon: "⏰" },
+];
 
 export default function TrackingScreen() {
   const { state } = useGame();
-  const { activeDeliveries, completedDeliveries, failedDeliveries } = state;
+  const { activeDeliveries, completedDeliveries, failedDeliveries, expiredOrders, gameMinutes } = state;
+  const [filter, setFilter] = useState("all");
+  const [expandedId, setExpandedId] = useState(null);
+
+  // Build unified shipment list
+  const allShipments = [
+    ...activeDeliveries.map((d) => ({ ...d, _status: "active" })),
+    ...completedDeliveries.map((d) => ({ ...d, _status: "delivered" })),
+    ...failedDeliveries.map((d) => ({ ...d, _status: "failed" })),
+    ...expiredOrders.map((d) => ({ ...d, _status: "expired" })),
+  ];
+
+  const filtered = filter === "all"
+    ? allShipments
+    : allShipments.filter((s) => s._status === filter);
+
+  const counts = {
+    all: allShipments.length,
+    active: activeDeliveries.length,
+    delivered: completedDeliveries.length,
+    failed: failedDeliveries.length,
+    expired: expiredOrders.length,
+  };
 
   return (
     <div className="screen tracking-screen">
       <div className="panel full-width">
         <div className="panel-header">
-          <h2>Live Delivery Tracking</h2>
-          <span className="count-badge in-transit">{activeDeliveries.length} in transit</span>
+          <h2>📡 Control Tower</h2>
+          <span className="count-badge in-transit">{activeDeliveries.length} live</span>
         </div>
 
-        {activeDeliveries.length === 0 ? (
-          <div className="empty-state">No active deliveries. Dispatch orders from the Warehouse.</div>
+        {/* Filter tabs */}
+        <div className="ct-filters">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              className={`ct-filter-btn ${filter === f.key ? "active" : ""}`}
+              onClick={() => setFilter(f.key)}
+            >
+              <span>{f.icon}</span>
+              <span>{f.label}</span>
+              <span className="ct-filter-count">{counts[f.key]}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Shipment list */}
+        {filtered.length === 0 ? (
+          <div className="empty-state">
+            {filter === "all"
+              ? "No shipments yet. Dispatch orders from the Dashboard."
+              : `No ${filter} shipments.`}
+          </div>
         ) : (
-          <div className="tracking-list">
-            {activeDeliveries.map((d) => {
-              const total = d.deliveryResult?.durationHours || 1;
-              const progress = d.remainingHours / total;
+          <div className="ct-shipment-list">
+            {filtered.map((shipment) => {
+              const carrier = getCarrierInfo(shipment.deliveryResult?.carrierName);
+              const isExpanded = expandedId === shipment.id;
+              const timeline = shipment.trackingTimeline || [];
+
               return (
-                <div key={d.id} className="tracking-card">
-                  <div className="tracking-top">
-                    <div className="tracking-id">
-                      <span className="order-id">#{d.id}</span>
-                      <span className="carrier-badge" style={{ background: getCarrierColor(d.deliveryResult?.carrierName) }}>
-                        <CarrierBadgeAnimated carrierName={d.deliveryResult?.carrierName} size={20} />
-                        {" "}{d.deliveryResult?.carrierName}
-                      </span>
-                    </div>
-                    <div className="tracking-meta">
-                      <span>{TERRAIN_ICONS[d.destinationTerrain]} {d.destinationTerrain}</span>
-                      <span>{d.distance} km</span>
-                      <span className="eta-label">ETA: {d.remainingHours.toFixed(1)}h</span>
-                    </div>
+                <div
+                  key={shipment.id}
+                  className={`ct-shipment-card ct-status-${shipment._status}`}
+                  onClick={() => setExpandedId(isExpanded ? null : shipment.id)}
+                >
+                  {/* Header row */}
+                  <div className="ct-ship-header">
+                    <span className="ct-ship-id">{shipment.storeIcon} #{shipment.id}</span>
+                    <span
+                      className="ct-carrier-badge"
+                      style={{ background: carrier.color }}
+                    >
+                      {carrier.icon} {shipment.deliveryResult?.carrierName} — {shipment.deliveryResult?.serviceName}
+                    </span>
+                    <span className="ct-zone-tag">📍 {shipment.zone}</span>
+                    <span className={`ct-status-tag ct-tag-${shipment._status}`}>
+                      {shipment._status === "active" ? "🚛 In Transit"
+                        : shipment._status === "delivered" ? "✅ Delivered"
+                          : shipment._status === "failed" ? "❌ Failed"
+                            : "⏰ Expired"}
+                    </span>
+                    <span className="ct-expand-icon">{isExpanded ? "▲" : "▼"}</span>
                   </div>
-                  <ProgressBar value={progress} />
-                  {d.deliveryResult?.anomaly && (
-                    <div className="anomaly-notice">
-                      ⚠ {d.deliveryResult.anomaly.label} — +{d.deliveryResult.anomaly.extraHours}h added
+
+                  {/* Summary row */}
+                  <div className="ct-ship-meta">
+                    <span>📦 {shipment.weight}kg</span>
+                    <span>₹{shipment.deliveryResult?.cost}</span>
+                    <span>SLA: {shipment.deliveryResult?.sla}</span>
+                    {shipment.deliveryResult?.points > 0 && (
+                      <span className="ct-points">+{shipment.deliveryResult.points}pts</span>
+                    )}
+                    {!shipment.deliveryResult?.zoneServed && (
+                      <span className="warning-tag">⚠ Zone mismatch</span>
+                    )}
+                    {!shipment.deliveryResult?.dgCompliant && (
+                      <span className="warning-tag">⚠ DG violation</span>
+                    )}
+                  </div>
+
+                  {/* Progress bar for active */}
+                  {shipment._status === "active" && (
+                    <div className="ct-progress-bar">
+                      <div
+                        className="ct-progress-fill"
+                        style={{
+                          width: `${(timeline.filter((e) => e.triggered).length / Math.max(1, timeline.length)) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Expanded timeline */}
+                  {isExpanded && timeline.length > 0 && (
+                    <div className="ct-timeline">
+                      {timeline.map((evt, i) => {
+                        const meta = EVENT_MAP[evt.code] || { label: evt.code, icon: "📌" };
+                        return (
+                          <div
+                            key={i}
+                            className={`ct-timeline-event ${evt.triggered ? "triggered" : "pending"}`}
+                          >
+                            <div className="ct-tl-dot" />
+                            <div className="ct-tl-line" />
+                            <span className="ct-tl-icon">{meta.icon}</span>
+                            <span className="ct-tl-label">{meta.label}</span>
+                            {evt.triggered && <span className="ct-tl-check">✓</span>}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -66,59 +159,6 @@ export default function TrackingScreen() {
           </div>
         )}
       </div>
-
-      <div className="tracking-bottom-row">
-        <div className="panel half">
-          <div className="panel-header">
-            <h3>Completed</h3>
-            <span className="count-badge">{completedDeliveries.length}</span>
-          </div>
-          <div className="compact-list">
-            {completedDeliveries.slice().reverse().map((d) => (
-              <div key={d.id} className="compact-row success">
-                <span className="order-id">#{d.id}</span>
-                <span>{d.deliveryResult?.carrierName}</span>
-                <span>{TERRAIN_ICONS[d.destinationTerrain]}</span>
-                <span className="points-tag">+{d.deliveryResult?.points}pts</span>
-                {d.deliveryResult?.isFast && <span className="fast-tag">Fast</span>}
-              </div>
-            ))}
-            {completedDeliveries.length === 0 && <div className="empty-state small">None yet.</div>}
-          </div>
-        </div>
-
-        <div className="panel half">
-          <div className="panel-header">
-            <h3>Failed</h3>
-            <span className={`count-badge ${failedDeliveries.length > 0 ? "danger" : ""}`}>{failedDeliveries.length}</span>
-          </div>
-          <div className="compact-list">
-            {failedDeliveries.map((d) => (
-              <div key={d.id} className="compact-row fail">
-                <span className="order-id">#{d.id}</span>
-                <span>Failed</span>
-              </div>
-            ))}
-            {failedDeliveries.length === 0 && <div className="empty-state small">No failures.</div>}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
-
-const CARRIER_COLORS = {
-  CityExpress: "#3b82f6",
-  EcoShip: "#22c55e",
-  MountainGo: "#f97316",
-  RiverLine: "#06b6d4",
-};
-const CARRIER_ICONS = {
-  CityExpress: "🚚",
-  EcoShip: "🌿",
-  MountainGo: "⛰️",
-  RiverLine: "🚢",
-};
-
-function getCarrierColor(name) { return CARRIER_COLORS[name] || "#64748b"; }
-function getCarrierIcon(name) { return CARRIER_ICONS[name] || "📦"; }
