@@ -16,7 +16,7 @@ export default function StartScreen() {
         <div className="start-info">
           <div className="info-row">
             <span className="info-icon">🏢</span>
-            <span>Manage 25 shipments as a Centiro TMS operator</span>
+            <span>Manage shipments as a Centiro TMS operator</span>
           </div>
           <div className="info-row">
             <span className="info-icon">🎯</span>
@@ -33,12 +33,12 @@ export default function StartScreen() {
         </div>
 
         <div className="start-carriers">
-          <div className="mini-carrier" style={{ borderColor: "#4D148C" }}>📦 FedEx — International Express</div>
-          <div className="mini-carrier" style={{ borderColor: "#351C15" }}>🟤 UPS — US/EU Coverage</div>
-          <div className="mini-carrier" style={{ borderColor: "#FFCC00" }}>✈️ DHL — Global Reach</div>
-          <div className="mini-carrier" style={{ borderColor: "#E31E25" }}>🚛 Delhivery — India Domestic</div>
-          <div className="mini-carrier" style={{ borderColor: "#003DA5" }}>🔵 Bluedart — India + DG</div>
-          <div className="mini-carrier" style={{ borderColor: "#DC0018" }}>🇨🇭 Swiss Post — EU Economy</div>
+          <div className="mini-carrier" style={{ borderColor: "#4D148C" }}>📦 FedEx</div>
+          <div className="mini-carrier" style={{ borderColor: "#351C15" }}>🟤 UPS</div>
+          <div className="mini-carrier" style={{ borderColor: "#FFCC00" }}>✈️ DHL</div>
+          <div className="mini-carrier" style={{ borderColor: "#E31E25" }}>🚛 Delhivery</div>
+          <div className="mini-carrier" style={{ borderColor: "#003DA5" }}>🔵 Bluedart</div>
+          <div className="mini-carrier" style={{ borderColor: "#DC0018" }}>🇨🇭 Maersk</div>
         </div>
 
         <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>

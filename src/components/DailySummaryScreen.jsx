@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useGame } from "../context/GameContext";
 import indianSong from "../assets/indian-song.mp3";
+import { saveScore, isHighScore } from "../game/storage";
 
 export default function DailySummaryScreen() {
   const { state, dispatch } = useGame();
@@ -18,11 +19,21 @@ export default function DailySummaryScreen() {
     };
   }, []);
 
+  const [showLBModal, setShowLBModal] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
   // The most recent past day is the one that just finished
   const todayEntry = state.pastDays[state.pastDays.length - 1];
   if (!todayEntry) return null;
 
   const { day, points, stats, moneyEarned = 0 } = todayEntry;
+
+  const handleSubmitScore = () => {
+    const name = playerName.trim() || "Anonymous";
+    saveScore({ name, points, delivered: stats.delivered, shift: day, moneyEarned });
+    setSubmitted(true);
+  };
 
   const handleNextDay = () => {
     dispatch({ type: "START_NEXT_DAY" });
@@ -101,9 +112,59 @@ export default function DailySummaryScreen() {
           </ul>
         </div>
 
-        <button className="primary-btn pulse-glow" onClick={handleNextDay}>
-          Begin Shift {day + 1} ☀️
-        </button>
+        <div className="summary-actions">
+          {!submitted && (
+            <button className="lb-submit-btn" onClick={() => setShowLBModal(true)}>
+              🏅 Add to Leaderboard
+            </button>
+          )}
+          {submitted && (
+            <span className="lb-submitted-tag">✅ Score submitted!</span>
+          )}
+          <button className="primary-btn pulse-glow" onClick={handleNextDay}>
+            Begin Shift {day + 1} ☀️
+          </button>
+        </div>
+
+        {/* Leaderboard submission overlay */}
+        {showLBModal && (
+          <div className="lb-modal-backdrop" onClick={() => setShowLBModal(false)}>
+            <div className="lb-modal" onClick={(e) => e.stopPropagation()}>
+              <h3 className="lb-modal-title">🏅 Submit to Leaderboard</h3>
+              <div className="lb-score-preview">
+                <div className="lb-preview-row">
+                  <span>Shift</span><strong>#{day}</strong>
+                </div>
+                <div className="lb-preview-row">
+                  <span>Points</span><strong style={{ color: "#22c55e" }}>{points > 0 ? `+${points}` : points}</strong>
+                </div>
+                <div className="lb-preview-row">
+                  <span>Delivered</span><strong style={{ color: "#38bdf8" }}>{stats.delivered}</strong>
+                </div>
+                <div className="lb-preview-row">
+                  <span>Earnings</span><strong style={{ color: "#f59e0b" }}>₹{moneyEarned.toLocaleString()}</strong>
+                </div>
+              </div>
+              <label className="lb-name-label">Your Name</label>
+              <input
+                className="lb-name-input"
+                type="text"
+                maxLength={24}
+                placeholder="Enter your name..."
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmitScore()}
+                autoFocus
+              />
+              <div className="lb-modal-actions">
+                <button className="lb-cancel-btn" onClick={() => setShowLBModal(false)}>Cancel</button>
+                <button className="lb-confirm-btn" onClick={() => { handleSubmitScore(); setShowLBModal(false); }}>
+                  Submit Score
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -200,6 +261,128 @@ export default function DailySummaryScreen() {
           70% { box-shadow: 0 0 0 10px rgba(14, 165, 233, 0); }
           100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
         }
+        .summary-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          margin-top: 1rem;
+        }
+        .lb-submit-btn {
+          background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(99,102,241,0.18));
+          border: 1px solid rgba(245,158,11,0.5);
+          color: #fbbf24;
+          font-size: 1rem;
+          font-weight: 700;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .lb-submit-btn:hover {
+          background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(99,102,241,0.28));
+          border-color: rgba(245,158,11,0.8);
+          box-shadow: 0 0 14px rgba(245,158,11,0.3);
+        }
+        .lb-submitted-tag {
+          text-align: center;
+          color: #22c55e;
+          font-weight: 700;
+          font-size: 0.95rem;
+          padding: 0.5rem;
+        }
+        /* Modal */
+        .lb-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.75);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .lb-modal {
+          background: #0d0d0d;
+          border: 1px solid #334155;
+          border-radius: 14px;
+          padding: 2rem;
+          width: 100%;
+          max-width: 420px;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+          animation: lbModalIn 0.25s ease;
+        }
+        @keyframes lbModalIn { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+        .lb-modal-title {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #f8fafc;
+          margin: 0;
+          text-align: center;
+        }
+        .lb-score-preview {
+          background: rgba(15,23,42,0.8);
+          border: 1px solid #1e293b;
+          border-radius: 8px;
+          padding: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.6rem;
+        }
+        .lb-preview-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.95rem;
+          color: #94a3b8;
+        }
+        .lb-preview-row strong { color: #f8fafc; }
+        .lb-name-label {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .lb-name-input {
+          background: #0f172a;
+          border: 1px solid #334155;
+          border-radius: 8px;
+          color: #f8fafc;
+          font-size: 1rem;
+          padding: 0.65rem 0.9rem;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+        .lb-name-input:focus { border-color: #6366f1; }
+        .lb-modal-actions {
+          display: flex;
+          gap: 0.75rem;
+          justify-content: flex-end;
+        }
+        .lb-cancel-btn {
+          background: transparent;
+          border: 1px solid #334155;
+          color: #94a3b8;
+          border-radius: 8px;
+          padding: 0.55rem 1.1rem;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all 0.15s;
+        }
+        .lb-cancel-btn:hover { border-color: #64748b; color: #f8fafc; }
+        .lb-confirm-btn {
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
+          border: none;
+          color: #fff;
+          border-radius: 8px;
+          padding: 0.55rem 1.2rem;
+          cursor: pointer;
+          font-size: 0.9rem;
+          font-weight: 700;
+          transition: opacity 0.15s;
+        }
+        .lb-confirm-btn:hover { opacity: 0.85; }
       `}</style>
     </div>
   );

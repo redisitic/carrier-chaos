@@ -35,17 +35,21 @@ export default function LeaderboardScreen({ onClose }) {
                             <thead>
                                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
                                     <th style={{ padding: "8px", width: "40px" }}>#</th>
-                                    <th style={{ padding: "8px" }}>Score</th>
+                                    <th style={{ padding: "8px" }}>Name</th>
+                                    <th style={{ padding: "8px" }}>Points</th>
                                     <th style={{ padding: "8px" }}>Delivered</th>
+                                    <th style={{ padding: "8px" }}>Shift</th>
                                     <th style={{ padding: "8px" }}>Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {board.map((entry, index) => (
                                     <tr key={index} style={{ borderBottom: "1px solid var(--border)", background: index === 0 ? "rgba(245, 158, 11, 0.1)" : "transparent" }}>
-                                        <td style={{ padding: "8px", fontWeight: "bold" }}>{index + 1}</td>
-                                        <td style={{ padding: "8px", color: "var(--success)" }}>{entry.points}</td>
+                                        <td style={{ padding: "8px", fontWeight: "bold" }}>{index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}</td>
+                                        <td style={{ padding: "8px", fontWeight: 600, color: "#f8fafc" }}>{entry.name || "Anonymous"}</td>
+                                        <td style={{ padding: "8px", color: "var(--success)" }}>{entry.points > 0 ? `+${entry.points}` : entry.points}</td>
                                         <td style={{ padding: "8px" }}>{entry.delivered}</td>
+                                        <td style={{ padding: "8px", color: "#818cf8" }}>#{entry.shift ?? "—"}</td>
                                         <td style={{ padding: "8px", fontSize: "0.85em", color: "var(--text-muted)" }}>
                                             {new Date(entry.date).toLocaleDateString()}
                                         </td>
