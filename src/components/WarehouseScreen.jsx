@@ -1,6 +1,6 @@
 import { useGame } from "../context/GameContext";
-import { isWarehouseOpen, getExpiryProgress } from "../game/logic";
-import { WAREHOUSE, ORDER_EXPIRY_MINUTES } from "../game/constants";
+import { isWarehouseOpen, getExpiryProgress, formatDeliveryDate } from "../game/logic";
+import { WAREHOUSE, ORDER_EXPIRY_MINUTES, SLA_HOURS } from "../game/constants";
 import WarehouseWorkers from "./WarehouseWorkers";
 
 const PRIORITY_BADGE = {
@@ -69,7 +69,9 @@ export default function WarehouseScreen() {
                       {order.isFragile && <span className="fragile-tag">🔸</span>}
                     </div>
                     <div className="order-card-mid">
-                      <span className="deadline-tag">⏰ {order.deadline}</span>
+                      <span className="deadline-tag" title={`SLA: ${order.deadline}`}>
+                        ⏰ Due {formatDeliveryDate(order.arrivalMinutes + SLA_HOURS[order.deadline] * 60)}
+                      </span>
                       <span className="value-tag">₹{order.value.toLocaleString()}</span>
                       {/* Expiry indicator */}
                       <div className="expiry-mini" title={`Expires in ${Math.round(ORDER_EXPIRY_MINUTES * (1 - expiryPct))} min`}>

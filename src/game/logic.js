@@ -28,6 +28,20 @@ export function randFrom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+/**
+ * Converts a total number of game minutes into a formatted "Day X, HH:MM" string.
+ */
+export function formatDeliveryDate(minutes) {
+  const d = Math.floor(minutes / (24 * 60)) + 1;
+  const h = Math.floor((minutes % (24 * 60)) / 60);
+  const m = Math.floor(minutes % 60);
+
+  const hh = h.toString().padStart(2, "0");
+  const mm = m.toString().padStart(2, "0");
+
+  return `Day ${d}, ${hh}:${mm}`;
+}
+
 // ── Order generation ──────────────────────────────────────────────────────────
 
 let _orderId = 1000;
