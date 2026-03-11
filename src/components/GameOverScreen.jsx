@@ -13,7 +13,7 @@ export default function GameOverScreen() {
   const won = phase === "won";
 
   useEffect(() => {
-    saveScore({ points, delivered: stats.totalDelivered });
+    saveScore({ points, delivered: stats.totalDelivered, name: "Anonymous" });
   }, [points, stats.totalDelivered]);
 
   return (

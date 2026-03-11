@@ -3,16 +3,17 @@ import { getLeaderboard, clearLeaderboard } from "../game/storage";
 
 export default function LeaderboardScreen({ onClose }) {
     const [board, setBoard] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setBoard(getLeaderboard());
+        getLeaderboard().then(data => {
+            setBoard(data);
+            setLoading(false);
+        });
     }, []);
 
     const handleClear = () => {
-        if (confirm("Are you sure you want to clear the leaderboard?")) {
-            clearLeaderboard();
-            setBoard([]);
-        }
+        alert("Clearing the leaderboard is disabled online.");
     };
 
     return (
@@ -25,7 +26,11 @@ export default function LeaderboardScreen({ onClose }) {
                     <button className="nav-btn" onClick={onClose} style={{ padding: "4px 12px" }}>Close</button>
                 </div>
 
-                {board.length === 0 ? (
+                {loading ? (
+                    <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
+                        Loading leaderboard...
+                    </div>
+                ) : board.length === 0 ? (
                     <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
                         No scores recorded yet. Play a game!
                     </div>

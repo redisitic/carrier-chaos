@@ -1,50 +1,43 @@
-/**
- * Local storage leaderboard for CarrierChaos.
- * Stores top 10 high scores.
- */
+import { collection, query, orderBy, limit, getDocs, addDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
-const STORAGE_KEY = "carrierchaos_leaderboard";
+const COLLECTION_NAME = "leaderboard";
 const MAX_ENTRIES = 10;
 
-export function getLeaderboard() {
+export async function getLeaderboard() {
     try {
-        const data = localStorage.getItem(STORAGE_KEY);
-        return data ? JSON.parse(data) : [];
-    } catch {
+        const q = query(collection(db, COLLECTION_NAME), orderBy("points", "desc"), limit(MAX_ENTRIES));
+        const querySnapshot = await getDocs(q);
+        const board = [];
+        querySnapshot.forEach((doc) => {
+            board.push({ id: doc.id, ...doc.data() });
+        });
+        return board;
+    } catch (e) {
+        console.error("Error fetching leaderboard:", e);
         return [];
     }
 }
 
-export function saveScore(entry) {
-    const board = getLeaderboard();
-    board.push({
-        ...entry,
-        date: new Date().toISOString(),
-    });
-
-    // Sort by points descending, keep top N
-    board.sort((a, b) => b.points - a.points);
-    const trimmed = board.slice(0, MAX_ENTRIES);
-
+export async function saveScore(entry) {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-    } catch {
-        // localStorage full or unavailable
-    }
-
-    return trimmed;
-}
-
-export function clearLeaderboard() {
-    try {
-        localStorage.removeItem(STORAGE_KEY);
-    } catch {
-        // ignore
+        await addDoc(collection(db, COLLECTION_NAME), {
+            ...entry,
+            date: new Date().toISOString()
+        });
+        return await getLeaderboard();
+    } catch (e) {
+        console.error("Error saving score:", e);
+        return [];
     }
 }
 
-export function isHighScore(points) {
-    const board = getLeaderboard();
+export async function clearLeaderboard() {
+    console.warn("clearLeaderboard is not supported with Firestore directly from client.");
+}
+
+export async function isHighScore(points) {
+    const board = await getLeaderboard();
     if (board.length < MAX_ENTRIES) return true;
     return points > board[board.length - 1].points;
 }

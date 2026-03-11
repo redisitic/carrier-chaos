@@ -2,15 +2,18 @@ import React, { useEffect, useRef, useState } from "react";
 import { useGame } from "../context/GameContext";
 import indianSong from "../assets/indian-song.mp3";
 import { saveScore, isHighScore } from "../game/storage";
+import { useAudio } from "../hooks/useAudio";
 
 export default function DailySummaryScreen() {
   const { state, dispatch } = useGame();
+  const { muted } = useAudio();
   const audioRef = useRef(null);
 
   useEffect(() => {
     const audio = new Audio(indianSong);
     audio.loop = true;
     audio.volume = 0.6;
+    audio.muted = muted;
     audio.play().catch(() => {});
     audioRef.current = audio;
     return () => {
@@ -18,6 +21,12 @@ export default function DailySummaryScreen() {
       audio.currentTime = 0;
     };
   }, []);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = muted;
+    }
+  }, [muted]);
 
   const [showLBModal, setShowLBModal] = useState(false);
   const [playerName, setPlayerName] = useState("");
@@ -29,9 +38,9 @@ export default function DailySummaryScreen() {
 
   const { day, points, stats, moneyEarned = 0 } = todayEntry;
 
-  const handleSubmitScore = () => {
+  const handleSubmitScore = async () => {
     const name = playerName.trim() || "Anonymous";
-    saveScore({ name, points, delivered: stats.delivered, shift: day, moneyEarned });
+    await saveScore({ name, points, delivered: stats.delivered, shift: day, moneyEarned });
     setSubmitted(true);
   };
 
