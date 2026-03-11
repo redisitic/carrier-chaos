@@ -126,7 +126,8 @@ export default function CarrierSelectionScreen() {
     : null;
 
   const handleSelect = (carrierName, serviceName, extraPointsDelta = 0) => {
-    const totalBonus = filterBonus + extraPointsDelta;
+    // If we're using Determination, the flat cost overrides any filter bonuses
+    const totalBonus = extraPointsDelta < 0 ? extraPointsDelta : filterBonus + extraPointsDelta;
     dispatch({ type: "DISPATCH_ORDER", orderId: order.id, carrierName, serviceName, filterBonus: totalBonus });
   };
 

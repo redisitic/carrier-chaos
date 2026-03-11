@@ -64,16 +64,26 @@ class SoundSynth {
 // Singleton synth instance
 export const synth = new SoundSynth();
 
+const listeners = new Set();
+let globalMuted = false;
+
+function setGlobalMuted(val) {
+    globalMuted = val;
+    synth.setMuted(val);
+    listeners.forEach(l => l(val));
+}
+
 export function useAudio() {
-    const [muted, setMuted] = useState(false);
+    const [muted, setMuted] = useState(globalMuted);
 
     useEffect(() => {
-        synth.setMuted(muted);
-    }, [muted]);
+        listeners.add(setMuted);
+        return () => listeners.delete(setMuted);
+    }, []);
 
     return {
         play: (sound) => synth.play(sound),
         muted,
-        toggleMute: () => setMuted(!muted),
+        toggleMute: () => setGlobalMuted(!globalMuted),
     };
 }
