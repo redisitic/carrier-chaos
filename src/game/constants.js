@@ -1,127 +1,246 @@
-// ── Terrain ──────────────────────────────────────────────────────────────────
-export const TERRAINS = ["Urban", "Rugged", "Waterway", "Mountain"];
+// ══════════════════════════════════════════════════════════════════════════════
+// CarrierChaos v2 — Centiro TMS Simulator Constants
+// ══════════════════════════════════════════════════════════════════════════════
 
-export const TERRAIN_PENALTY = {
-  Urban: 1.0,
-  Rugged: 1.5,
-  Waterway: 2.0,
-  Mountain: 2.5,
+// ── Destination Zones ────────────────────────────────────────────────────────
+export const ZONES = [
+  "India Metro",
+  "India Tier-2",
+  "India Rural",
+];
+
+export const DOMESTIC_ZONES = ["India Metro", "India Tier-2", "India Rural"];
+
+// Zone distance ranges (km) — affects transit time
+export const ZONE_DISTANCE = {
+  "India Metro": { min: 10, max: 150 },
+  "India Tier-2": { min: 100, max: 500 },
+  "India Rural": { min: 200, max: 800 },
 };
 
-// ── Carriers ─────────────────────────────────────────────────────────────────
-export const CARRIERS = [
+// ── Stores (Order Sources) ──────────────────────────────────────────────────
+export const STORES = [
   {
-    name: "CityExpress",
-    speed: 90,
-    costPerShipment: 40,
-    preferredTerrains: ["Urban"],
-    operatingHours: { start: 9, end: 17 },
-    color: "#3b82f6",
-    icon: "🚚",
+    name: "Nike",
+    icon: "👟",
+    category: "Apparel & Footwear",
+    avgWeight: { min: 0.5, max: 5 },
+    avgValue: { min: 3000, max: 15000 },
+    dgChance: 0,
+    fragileChance: 0.05,
+    zones: ["India Metro", "India Tier-2"],
+    priorities: ["Express", "Standard"],
   },
   {
-    name: "EcoShip",
-    speed: 45,
-    costPerShipment: 20,
-    preferredTerrains: ["Urban", "Rugged"],
-    operatingHours: { start: 9, end: 17 },
-    color: "#22c55e",
-    icon: "🌿",
+    name: "Samsung",
+    icon: "📱",
+    category: "Electronics",
+    avgWeight: { min: 0.3, max: 15 },
+    avgValue: { min: 5000, max: 50000 },
+    dgChance: 0.15,     // batteries = DG
+    fragileChance: 0.4,
+    zones: ["India Metro", "India Tier-2", "India Rural"],
+    priorities: ["Express", "Standard", "Economy"],
   },
   {
-    name: "MountainGo",
-    speed: 65,
-    costPerShipment: 35,
-    preferredTerrains: ["Mountain"],
-    operatingHours: null, // 24h
-    color: "#f97316",
-    icon: "⛰️",
+    name: "IKEA",
+    icon: "🪑",
+    category: "Furniture & Home",
+    avgWeight: { min: 5, max: 50 },
+    avgValue: { min: 2000, max: 25000 },
+    dgChance: 0,
+    fragileChance: 0.3,
+    zones: ["India Metro", "India Tier-2"],
+    priorities: ["Standard", "Economy"],
   },
   {
-    name: "RiverLine",
-    speed: 60,
-    costPerShipment: 30,
-    preferredTerrains: ["Waterway"],
-    operatingHours: null, // 24h
-    color: "#06b6d4",
-    icon: "🚢",
+    name: "Pharma Plus",
+    icon: "💊",
+    category: "Pharmaceuticals",
+    avgWeight: { min: 0.1, max: 2 },
+    avgValue: { min: 500, max: 5000 },
+    dgChance: 0.6,      // medicines often classified DG
+    fragileChance: 0.2,
+    zones: ["India Metro", "India Tier-2", "India Rural"],
+    priorities: ["Express", "Standard"],
   },
 ];
 
-// ── Warehouse ─────────────────────────────────────────────────────────────────
-export const WAREHOUSE = {
-  openHour: 9,
-  closeHour: 16,
-  workers: 5,
-  processingTimeHours: 1, // per shipment per worker
-  capacity: 15,
+// ── Carriers & Services (All India) ─────────────────────────────────────────
+export const CARRIERS = [
+  {
+    name: "FedEx",
+    icon: "📦",
+    color: "#4D148C",
+    reliability: 0.96,
+    services: [
+      { name: "Priority Express", sla: "same-day", costPerKg: 220, zones: ["India Metro"], dg: true, maxWeight: 20 },
+      { name: "Standard Express", sla: "next-day", costPerKg: 150, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 30 },
+      { name: "Economy", sla: "3-5 day", costPerKg: 75, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50 },
+    ],
+  },
+  {
+    name: "UPS",
+    icon: "🟤",
+    color: "#351C15",
+    reliability: 0.95,
+    services: [
+      { name: "Express Saver", sla: "next-day", costPerKg: 180, zones: ["India Metro", "India Tier-2"], dg: true, maxWeight: 25 },
+      { name: "Standard", sla: "3-5 day", costPerKg: 85, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 40 },
+      { name: "Ground Freight", sla: "5-7 day", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 100 },
+    ],
+  },
+  {
+    name: "DHL",
+    icon: "✈️",
+    color: "#FFCC00",
+    reliability: 0.97,
+    services: [
+      { name: "Express", sla: "same-day", costPerKg: 250, zones: ["India Metro"], dg: true, maxWeight: 15 },
+      { name: "Domestic Economy", sla: "3-5 day", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 50 },
+      { name: "eCommerce", sla: "5-7 day", costPerKg: 45, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30 },
+    ],
+  },
+  {
+    name: "Delhivery",
+    icon: "🚛",
+    color: "#E31E25",
+    reliability: 0.91,
+    services: [
+      { name: "Express", sla: "next-day", costPerKg: 80, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 20 },
+      { name: "Standard", sla: "3-5 day", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30 },
+      { name: "Surface", sla: "5-7 day", costPerKg: 25, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50 },
+    ],
+  },
+  {
+    name: "Bluedart",
+    icon: "🔵",
+    color: "#003DA5",
+    reliability: 0.93,
+    services: [
+      { name: "Dart Apex Plus", sla: "same-day", costPerKg: 150, zones: ["India Metro"], dg: true, maxWeight: 10 },
+      { name: "Dart Apex", sla: "next-day", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 20 },
+      { name: "Dart Surface", sla: "3-5 day", costPerKg: 35, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50 },
+    ],
+  },
+  {
+    name: "Swiss Post",
+    icon: "🇨🇭",
+    color: "#DC0018",
+    reliability: 0.94,
+    services: [
+      { name: "Premium Express", sla: "next-day", costPerKg: 160, zones: ["India Metro"], dg: false, maxWeight: 15 },
+      { name: "Standard", sla: "3-5 day", costPerKg: 65, zones: ["India Metro", "India Tier-2"], dg: false, maxWeight: 25 },
+      { name: "Economy Surface", sla: "5-7 day", costPerKg: 30, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 40 },
+    ],
+  },
+];
+
+// ── SLA to hours mapping ────────────────────────────────────────────────────
+export const SLA_HOURS = {
+  "same-day": 6,
+  "next-day": 24,
+  "3-5 day": 96,    // ~4 days avg
+  "5-7 day": 144,   // ~6 days avg
 };
 
-// ── Player start ──────────────────────────────────────────────────────────────
+// ── Deadline options ────────────────────────────────────────────────────────
+export const DEADLINES = ["same-day", "next-day", "3-5 day", "5-7 day"];
+
+// ── Priorities ──────────────────────────────────────────────────────────────
+export const PRIORITIES = ["Express", "Standard", "Economy"];
+
+// ── Scoring ─────────────────────────────────────────────────────────────────
+export const SCORE = {
+  slaMatch: 50,             // Service SLA meets or beats deadline
+  slaMiss: -30,             // SLA exceeds deadline
+  costEfficiency: 40,       // Cheapest valid option chosen
+  costPenaltyRate: 0.5,     // Points lost per ₹ over the cheapest
+  dgCompliance: 0,          // No bonus, just required
+  dgViolation: -50,         // DG sent via non-DG carrier
+  speedBonus: 20,           // Faster SLA than required
+  fragileBonus: 15,         // Premium carrier for fragile
+  fragilePenalty: -10,      // Economy carrier for fragile
+  successfulDelivery: 50,   // Base delivery completion
+  reliabilityFail: -40,     // Delivery failed due to carrier unreliability
+};
+
+// ── Player start ────────────────────────────────────────────────────────────
 export const INITIAL_PLAYER = {
-  money: 1000,
-  totalShipments: 20,
+  money: 25000,       // ₹25,000 starting budget
+  totalShipments: 25,
   xp: 0,
   points: 0,
 };
 
-// ── Scoring ───────────────────────────────────────────────────────────────────
-export const SCORE = {
-  successfulDelivery: 50,
-  fastDelivery: 30,
-  correctCarrier: 20,
-  lateDelivery: -10,
-  wrongTerrainCarrier: -20,
-};
-
-// ── Anomalies ─────────────────────────────────────────────────────────────────
-export const ANOMALIES = [
-  { type: "weather_delay", label: "Weather Delay", probability: 0.10, extraHours: 2 },
-  { type: "carrier_breakdown", label: "Carrier Breakdown", probability: 0.05, extraHours: 3 },
-  { type: "warehouse_overload", label: "Warehouse Overload", probability: 0.07, extraHours: 1 },
-];
-
-// ── Win / Lose thresholds ─────────────────────────────────────────────────────
-export const WIN_CONDITION = { allDelivered: true, minFunds: 0 };
+// ── Win / Lose ──────────────────────────────────────────────────────────────
 export const LOSE_CONDITIONS = { minFunds: 0, maxFailedShipments: 5 };
 
-// ── Game clock ────────────────────────────────────────────────────────────────
-// Each "tick" = 1 in-game minute. Real-time tick interval in ms.
-export const TICK_INTERVAL_MS = 1000;   // 1 second per tick (was 500ms)
-export const MINUTES_PER_TICK = 5;      // 5 in-game minutes per tick (was 15)
+// ── Time pressure ───────────────────────────────────────────────────────────
+export const ORDER_EXPIRY_MINUTES = 180;  // 3 in-game hours to assign
 
-// Speed multiplier options (accessed via HUD speed controls)
+// ── Game clock ──────────────────────────────────────────────────────────────
+export const TICK_INTERVAL_MS = 2000;
+export const MINUTES_PER_TICK = 2;
+
 export const SPEED_OPTIONS = [
-  { label: "1×", multiplier: 1, interval: 1000, minutes: 5 },
-  { label: "2×", multiplier: 2, interval: 500, minutes: 5 },
-  { label: "3×", multiplier: 3, interval: 300, minutes: 5 },
+  { label: "1×", multiplier: 1, interval: 2000, minutes: 2 },
+  { label: "2×", multiplier: 2, interval: 1000, minutes: 2 },
+  { label: "3×", multiplier: 3, interval: 600, minutes: 2 },
 ];
 
-// ── Rush hours (for dynamic pricing) ──────────────────────────────────────────
-export const RUSH_HOURS = [
-  { start: 9, end: 10 },    // morning rush
-  { start: 15, end: 16 },   // afternoon rush
-];
-export const RUSH_MULTIPLIER = 1.5;
-
-// ── Weather ───────────────────────────────────────────────────────────────────
-export const WEATHER_TYPES = [
-  { type: "clear", label: "Clear", icon: "☀️", deliveryMultiplier: 1.0, terrainEffect: null },
-  { type: "rain", label: "Rain", icon: "🌧️", deliveryMultiplier: 1.15, terrainEffect: null },
-  { type: "storm", label: "Storm", icon: "⛈️", deliveryMultiplier: 1.4, terrainEffect: null },
-  { type: "fog", label: "Fog", icon: "🌫️", deliveryMultiplier: 1.25, terrainEffect: "Waterway" },
-  { type: "wind", label: "Wind", icon: "💨", deliveryMultiplier: 1.1, terrainEffect: "Mountain" },
-];
-
-// Weather transition probabilities (from → to)
-export const WEATHER_TRANSITIONS = {
-  clear: { clear: 0.6, rain: 0.2, fog: 0.1, wind: 0.1, storm: 0 },
-  rain: { clear: 0.3, rain: 0.3, fog: 0.05, wind: 0.05, storm: 0.3 },
-  storm: { clear: 0.1, rain: 0.5, fog: 0.1, wind: 0.2, storm: 0.1 },
-  fog: { clear: 0.5, rain: 0.2, fog: 0.2, wind: 0.1, storm: 0 },
-  wind: { clear: 0.4, rain: 0.1, fog: 0.05, wind: 0.3, storm: 0.15 },
+// ── Warehouse / Dashboard hours ─────────────────────────────────────────────
+export const WAREHOUSE = {
+  openHour: 8,
+  closeHour: 18,
+  capacity: 20,
 };
 
-// Weather changes every N in-game minutes
-export const WEATHER_CHANGE_INTERVAL = 120; // every 2 hours
+// ── XP Levels ───────────────────────────────────────────────────────────────
+export const XP_LEVELS = [
+  { minXp: 0, level: 1, title: "Trainee" },
+  { minXp: 80, level: 2, title: "Analyst" },
+  { minXp: 200, level: 3, title: "Manager" },
+  { minXp: 400, level: 4, title: "Director" },
+  { minXp: 700, level: 5, title: "VP of Logistics" },
+];
 
+// ── Weather / Logistics Delays ──────────────────────────────────────────────
+export const WEATHER_TYPES = [
+  { type: "clear", label: "Clear Skies", icon: "☀️", deliveryMultiplier: 1.0, terrainEffect: null },
+  { type: "monsoon", label: "Monsoon", icon: "🌧️", deliveryMultiplier: 1.3, terrainEffect: "India Rural" },
+  { type: "fog", label: "Airport Fog", icon: "🌫️", deliveryMultiplier: 1.2, terrainEffect: null },
+  { type: "strike", label: "Transport Strike", icon: "🚫", deliveryMultiplier: 1.5, terrainEffect: "India Tier-2" },
+  { type: "customs", label: "Customs Backlog", icon: "📋", deliveryMultiplier: 1.4, terrainEffect: "India Metro" },
+];
+
+export const WEATHER_TRANSITIONS = {
+  clear: { clear: 0.55, monsoon: 0.2, fog: 0.1, strike: 0.1, customs: 0.05 },
+  monsoon: { clear: 0.3, monsoon: 0.35, fog: 0.1, strike: 0.15, customs: 0.1 },
+  fog: { clear: 0.5, monsoon: 0.15, fog: 0.2, strike: 0.1, customs: 0.05 },
+  strike: { clear: 0.4, monsoon: 0.1, fog: 0.05, strike: 0.3, customs: 0.15 },
+  customs: { clear: 0.45, monsoon: 0.1, fog: 0.05, strike: 0.1, customs: 0.3 },
+};
+
+export const WEATHER_CHANGE_INTERVAL = 120; // every 2 in-game hours
+
+// ── Tracking Event Codes ────────────────────────────────────────────────────
+export const TRACKING_EVENTS = [
+  { code: "ORDER_RECEIVED", label: "Order Received", icon: "📥" },
+  { code: "CARRIER_ASSIGNED", label: "Carrier Assigned", icon: "🏷️" },
+  { code: "PICKUP_SCHEDULED", label: "Pickup Scheduled", icon: "📅" },
+  { code: "PICKED_UP", label: "Picked Up", icon: "📤" },
+  { code: "IN_TRANSIT", label: "In Transit", icon: "🚛" },
+  { code: "AT_HUB", label: "At Sorting Hub", icon: "🏭" },
+  { code: "CUSTOMS_CLEARANCE", label: "Customs Clearance", icon: "🛃" },
+  { code: "OUT_FOR_DELIVERY", label: "Out for Delivery", icon: "🏍️" },
+  { code: "DELIVERED", label: "Delivered", icon: "✅" },
+  { code: "EXCEPTION", label: "Exception", icon: "⚠️" },
+];
+
+// ── Rush Hours (dynamic pricing) ────────────────────────────────────────────
+export const RUSH_HOURS = [
+  { start: 9, end: 10 },
+  { start: 14, end: 15 },
+];
+export const RUSH_MULTIPLIER = 1.4;

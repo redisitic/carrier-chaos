@@ -11,32 +11,34 @@ export default function StartScreen() {
       <div className="start-card">
         <div className="start-logo">📦</div>
         <h1 className="start-title">CarrierChaos</h1>
-        <p className="start-sub">Delivery Simulation Game</p>
+        <p className="start-sub">Centiro TMS Simulator</p>
 
         <div className="start-info">
           <div className="info-row">
-            <span className="info-icon">🏭</span>
-            <span>Manage 20 shipments from your warehouse</span>
+            <span className="info-icon">🏢</span>
+            <span>Manage 25 shipments as a Centiro TMS operator</span>
           </div>
           <div className="info-row">
-            <span className="info-icon">🚚</span>
-            <span>Pick the right carrier for each terrain</span>
+            <span className="info-icon">🎯</span>
+            <span>Choose the right carrier + service for each order</span>
           </div>
           <div className="info-row">
-            <span className="info-icon">⚡</span>
-            <span>Beat the clock and avoid anomalies</span>
+            <span className="info-icon">⏰</span>
+            <span>Orders expire — assign carriers before time runs out</span>
           </div>
           <div className="info-row">
             <span className="info-icon">💰</span>
-            <span>Start with $1,000 — don't go broke</span>
+            <span>Start with ₹25,000 — optimize costs to survive</span>
           </div>
         </div>
 
         <div className="start-carriers">
-          <div className="mini-carrier" style={{ borderColor: "#3b82f6" }}>🚚 CityExpress — Fast, Urban</div>
-          <div className="mini-carrier" style={{ borderColor: "#22c55e" }}>🌿 EcoShip — Cheap, Urban/Rugged</div>
-          <div className="mini-carrier" style={{ borderColor: "#f97316" }}>⛰️ MountainGo — Mountain, 24h</div>
-          <div className="mini-carrier" style={{ borderColor: "#06b6d4" }}>🚢 RiverLine — Waterway, 24h</div>
+          <div className="mini-carrier" style={{ borderColor: "#4D148C" }}>📦 FedEx — International Express</div>
+          <div className="mini-carrier" style={{ borderColor: "#351C15" }}>🟤 UPS — US/EU Coverage</div>
+          <div className="mini-carrier" style={{ borderColor: "#FFCC00" }}>✈️ DHL — Global Reach</div>
+          <div className="mini-carrier" style={{ borderColor: "#E31E25" }}>🚛 Delhivery — India Domestic</div>
+          <div className="mini-carrier" style={{ borderColor: "#003DA5" }}>🔵 Bluedart — India + DG</div>
+          <div className="mini-carrier" style={{ borderColor: "#DC0018" }}>🇨🇭 Swiss Post — EU Economy</div>
         </div>
 
         <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>

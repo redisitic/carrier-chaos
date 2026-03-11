@@ -1,21 +1,6 @@
 import { useGame } from "../context/GameContext";
-import { CARRIERS, TERRAIN_PENALTY } from "../game/constants";
-import { isCarrierAvailable, getCarrierCost, getCostTrend } from "../game/logic";
-import AnimatedCarrier from "./AnimatedCarrier";
-
-const TERRAIN_ICONS = {
-  Urban: "🏙️",
-  Rugged: "🪨",
-  Waterway: "🌊",
-  Mountain: "⛰️",
-};
-
-const carrierTypeMap = {
-  CityExpress: "truck",
-  EcoShip: "van",
-  MountainGo: "helicopter",
-  RiverLine: "ship",
-};
+import { CARRIERS } from "../game/constants";
+import { getServiceOptions, getCostTrend, getExpiryProgress } from "../game/logic";
 
 export default function CarrierSelectionScreen() {
   const { state, dispatch } = useGame();
@@ -29,127 +14,118 @@ export default function CarrierSelectionScreen() {
     return null;
   }
 
-  const handleSelect = (carrierName) => {
-    dispatch({ type: "DISPATCH_ORDER", orderId: order.id, carrierName });
+  const serviceOptions = getServiceOptions(order);
+  const cheapestValidCost = Math.min(
+    ...serviceOptions.filter((o) => o.valid).map((o) => o.cost),
+    Infinity
+  );
+  const trend = getCostTrend(gameHour);
+  const expiryPct = getExpiryProgress(order, gameMinutes);
+
+  const handleSelect = (carrierName, serviceName) => {
+    dispatch({ type: "DISPATCH_ORDER", orderId: order.id, carrierName, serviceName });
   };
 
   const handleBack = () => {
     dispatch({ type: "SET_SCREEN", screen: "warehouse" });
   };
 
+  // Group services by carrier
+  const carrierGroups = CARRIERS.map((carrier) => ({
+    ...carrier,
+    options: serviceOptions.filter((o) => o.carrierName === carrier.name),
+  }));
+
   return (
     <div className="screen carrier-screen">
       <div className="carrier-header">
         <button className="back-btn" onClick={handleBack}>← Back</button>
         <div className="order-summary">
-          <h2>Order #{order.id}</h2>
+          <h2>{order.storeIcon} Order #{order.id}</h2>
           <div className="order-details">
-            <span className="detail-pill">
-              {TERRAIN_ICONS[order.destinationTerrain]} {order.destinationTerrain}
-            </span>
-            <span className="detail-pill">{order.distance} km</span>
+            <span className="detail-pill">📍 {order.zone}</span>
+            <span className="detail-pill">📦 {order.weight} kg</span>
+            <span className="detail-pill">⏰ {order.deadline}</span>
             <span className="detail-pill">{order.priority}</span>
+            {order.isDG && <span className="detail-pill" style={{ background: "#dc2626", color: "#fff" }}>☢️ DG</span>}
+            {order.isFragile && <span className="detail-pill" style={{ background: "#f59e0b", color: "#000" }}>🔸 Fragile</span>}
+            <span className="detail-pill">₹{order.value.toLocaleString()}</span>
           </div>
+        </div>
+        {/* Expiry bar */}
+        <div className="expiry-bar" title={`${Math.round((1 - expiryPct) * 100)}% time remaining`}>
+          <div
+            className="expiry-fill"
+            style={{
+              width: `${(1 - expiryPct) * 100}%`,
+              background: expiryPct > 0.7 ? "var(--danger)" : expiryPct > 0.4 ? "var(--warning)" : "var(--success)",
+            }}
+          />
         </div>
       </div>
 
       <div className="terrain-tip">
         <span className="tip-icon">💡</span>
-        Tip: Matching carrier terrain reduces delivery time penalty significantly.
+        Choose a carrier + service that meets the <strong>{order.deadline}</strong> deadline. Wrong choices will cost you points!
+        {trend === "up" && <span style={{ color: "var(--warning)", marginLeft: 8 }}>⚠️ Rush hour pricing active!</span>}
       </div>
 
       <div className="carrier-grid">
-        {CARRIERS.map((carrier) => {
-          const available = isCarrierAvailable(carrier, gameHour);
-          const canAfford = money >= carrier.costPerShipment;
-          const isMatch = carrier.preferredTerrains.includes(order.destinationTerrain);
-
-          // Preview calculation (no anomaly roll for preview)
-          const basePenalty = TERRAIN_PENALTY[order.destinationTerrain];
-          const penalty = isMatch ? basePenalty * 0.6 : basePenalty;
-          const preview = ((order.distance / carrier.speed) * penalty).toFixed(1);
-
-          const disabled = !available || !canAfford;
-
-          return (
-            <div
-              key={carrier.name}
-              className={`carrier-card ${isMatch ? "terrain-match" : ""} ${disabled ? "disabled" : ""}`}
-              style={{ "--carrier-color": carrier.color }}
-            >
-              <div className="carrier-card-header">
-                <span className="carrier-icon-animated">
-                  <AnimatedCarrier
-                    type={carrierTypeMap[carrier.name] || "truck"}
-                    color={carrier.color}
-                    size={40}
-                    animate={!disabled}
-                  />
-                </span>
-                <div>
-                  <div className="carrier-name">{carrier.name}</div>
-                  {isMatch && <div className="match-badge">Best Match</div>}
-                </div>
-                <div className="carrier-cost">
-                  ${getCarrierCost(carrier, gameHour)}
-                  {getCostTrend(gameHour) === "up" && <span style={{ color: "var(--warning)", marginLeft: 2 }}>↗</span>}
-                  {getCostTrend(gameHour) === "down" && <span style={{ color: "var(--success)", marginLeft: 2 }}>↘</span>}
+        {carrierGroups.map((carrier) => (
+          <div key={carrier.name} className="carrier-card" style={{ "--carrier-color": carrier.color }}>
+            <div className="carrier-card-header">
+              <span className="carrier-icon-animated" style={{ fontSize: 24 }}>{carrier.icon}</span>
+              <div>
+                <div className="carrier-name">{carrier.name}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                  Reliability: {Math.round(carrier.reliability * 100)}%
                 </div>
               </div>
-
-              <div className="carrier-attrs">
-                <div className="attr">
-                  <span className="attr-label">Speed</span>
-                  <SpeedBar speed={carrier.speed} />
-                </div>
-                <div className="attr">
-                  <span className="attr-label">Terrain</span>
-                  <span className="attr-val">{carrier.preferredTerrains.join(", ")}</span>
-                </div>
-                <div className="attr">
-                  <span className="attr-label">Hours</span>
-                  <span className="attr-val">
-                    {carrier.operatingHours
-                      ? `${carrier.operatingHours.start}:00–${carrier.operatingHours.end}:00`
-                      : "24h"}
-                  </span>
-                </div>
-                <div className="attr">
-                  <span className="attr-label">Est. Time</span>
-                  <span className={`attr-val ${isMatch ? "highlight" : ""}`}>{preview}h</span>
-                </div>
-              </div>
-
-              {!available && (
-                <div className="carrier-unavail">Not available at current time</div>
-              )}
-              {available && !canAfford && (
-                <div className="carrier-unavail">Insufficient funds</div>
-              )}
-
-              {!disabled && (
-                <button
-                  className="select-carrier-btn"
-                  style={{ background: carrier.color }}
-                  onClick={() => handleSelect(carrier.name)}
-                >
-                  Dispatch with {carrier.name}
-                </button>
-              )}
             </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
-function SpeedBar({ speed }) {
-  const pct = Math.round((speed / 100) * 100);
-  return (
-    <div className="speed-bar-track">
-      <div className="speed-bar-fill" style={{ width: `${pct}%` }} />
-      <span className="speed-val">{speed} km/h</span>
+            <div className="service-list">
+              {carrier.options.map((opt) => {
+                const canAfford = money >= opt.cost;
+                const isCheapest = opt.valid && opt.cost === cheapestValidCost;
+                const hasWarnings = !opt.valid && opt.reasons.length > 0;
+
+                return (
+                  <div
+                    key={`${opt.carrierName}-${opt.serviceName}`}
+                    className={`service-row ${!canAfford ? "disabled" : ""} ${isCheapest ? "best-value" : ""} ${hasWarnings ? "has-warnings" : ""}`}
+                  >
+                    <div className="service-info">
+                      <span className="service-name">{opt.serviceName}</span>
+                      <span className="service-sla">{opt.sla}</span>
+                      {opt.dg && <span className="dg-badge">DG ✓</span>}
+                      {isCheapest && <span className="match-badge">Best Value</span>}
+                      {hasWarnings && (
+                        <div className="service-warnings">
+                          {opt.reasons.map((r, i) => (
+                            <span key={i} className="warning-tag">⚠ {r}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="service-cost">₹{opt.cost}</div>
+                    {canAfford ? (
+                      <button
+                        className="select-carrier-btn small"
+                        style={{ background: hasWarnings ? "#7f1d1d" : carrier.color }}
+                        onClick={() => handleSelect(opt.carrierName, opt.serviceName)}
+                      >
+                        {hasWarnings ? "Dispatch ⚠" : "Dispatch"}
+                      </button>
+                    ) : (
+                      <div className="service-reason">No funds</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

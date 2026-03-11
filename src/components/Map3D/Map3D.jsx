@@ -17,7 +17,7 @@ function Scene() {
     const queuedPositions = useMemo(() => {
         const map = {};
         for (const order of warehouseQueue) {
-            map[order.id] = getDeliveryPosition(order.destinationTerrain);
+            map[order.id] = getDeliveryPosition(order.zone);
         }
         return map;
     }, [warehouseQueue.map((o) => o.id).join(",")]);
@@ -142,10 +142,10 @@ export default function Map3D() {
                 color: "#94a3b8",
                 pointerEvents: "none",
             }}>
-                <span><span style={{ color: "#64748b" }}>■</span> Urban</span>
-                <span><span style={{ color: "#92400e" }}>■</span> Rugged</span>
-                <span><span style={{ color: "#0e7490" }}>■</span> Waterway</span>
-                <span><span style={{ color: "#6d28d9" }}>■</span> Mountain</span>
+                <span><span style={{ color: "#06b6d4" }}>●</span> Metro</span>
+                <span><span style={{ color: "#22c55e" }}>●</span> Tier-2</span>
+                <span><span style={{ color: "#a16207" }}>●</span> Rural</span>
+                <span><span style={{ color: "#f59e0b" }}>●</span> Hub</span>
             </div>
 
             {/* Controls hint */}

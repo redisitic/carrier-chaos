@@ -8,13 +8,15 @@ import {
   SPEED_OPTIONS,
   WEATHER_TYPES,
   WEATHER_CHANGE_INTERVAL,
+  TRACKING_EVENTS,
 } from "../game/constants";
 import {
   generateOrder,
   calculateDelivery,
   isWarehouseOpen,
   resetOrderId,
-  getCarrierCost,
+  isOrderExpired,
+  generateTrackingTimeline,
 } from "../game/logic";
 import { getNextWeather } from "../game/weather";
 import { synth } from "../hooks/useAudio";
@@ -24,17 +26,17 @@ import { synth } from "../hooks/useAudio";
 function createInitialState() {
   return {
     // Clock
-    gameMinutes: 8 * 60 + 45,
+    gameMinutes: 7 * 60 + 50,  // Start at 07:50, warehouse opens at 08:00
     day: 1,
     running: false,
     screen: "warehouse",
     phase: "playing",
 
     // Speed control
-    speedIndex: 0, // index into SPEED_OPTIONS
+    speedIndex: 0,
 
     // Weather
-    weather: WEATHER_TYPES[0], // start clear
+    weather: WEATHER_TYPES[0],
     lastWeatherChange: 0,
 
     // Player resources
@@ -49,6 +51,7 @@ function createInitialState() {
     activeDeliveries: [],
     completedDeliveries: [],
     failedDeliveries: [],
+    expiredOrders: [],
 
     // UI state
     selectedOrderId: null,
@@ -56,14 +59,19 @@ function createInitialState() {
     stats: {
       totalDelivered: 0,
       totalFailed: 0,
+      totalExpired: 0,
       totalAnomalies: 0,
-      fastDeliveries: 0,
-      correctCarrierChoices: 0,
+      onTimeDeliveries: 0,
+      costEfficient: 0,
     },
   };
 }
 
 // ── Reducer ───────────────────────────────────────────────────────────────────
+
+function addLog(log, message, type = "info") {
+  return [{ message, type, time: Date.now() }, ...log].slice(0, 50);
+}
 
 function reducer(state, action) {
   switch (action.type) {
@@ -88,6 +96,7 @@ function reducer(state, action) {
       let newActive = [...state.activeDeliveries];
       let newCompleted = [...state.completedDeliveries];
       let newFailed = [...state.failedDeliveries];
+      let newExpired = [...state.expiredOrders];
       let newMoney = state.money;
       let newPoints = state.points;
       let newXp = state.xp;
@@ -95,79 +104,110 @@ function reducer(state, action) {
       let newStats = { ...state.stats };
       let newOrders = [...state.orders];
 
+      // ── Weather ──
       let newWeather = state.weather;
       let newLastWeatherChange = state.lastWeatherChange;
-
-      // Weather checks
       const nextChangeCheck = newLastWeatherChange + WEATHER_CHANGE_INTERVAL;
       if (newMinutes >= nextChangeCheck) {
         newWeather = getNextWeather(state.weather.type);
         newLastWeatherChange = newMinutes;
         if (newWeather.type !== state.weather.type) {
-          newLog = addLog(newLog, `Weather changed to ${newWeather.label} ${newWeather.icon}`, "info");
+          newLog = addLog(newLog, `⚠️ ${newWeather.label} ${newWeather.icon} — logistics may be affected`, "warning");
         }
       }
 
-      // Advance in-transit timers
+      // ── Advance in-transit deliveries ──
       const stillInTransit = [];
       for (const d of newActive) {
-        const remainingHours = d.remainingHours - MINUTES_PER_TICK / 60;
-        if (remainingHours <= 0) {
+        const elapsedHours = (newMinutes - d.dispatchMinutes) / 60;
+
+        // Update tracking events
+        const updatedEvents = d.trackingTimeline.map((evt) => ({
+          ...evt,
+          triggered: elapsedHours >= evt.offsetHours,
+        }));
+
+        if (elapsedHours >= d.deliveryResult.durationHours) {
           // Delivery complete
-          const finished = { ...d, remainingHours: 0, status: "delivered" };
-          newCompleted.push(finished);
-          newStats.totalDelivered += 1;
-          if (d.deliveryResult.isFast) newStats.fastDeliveries += 1;
-          if (d.deliveryResult.terrainMatch) newStats.correctCarrierChoices += 1;
-          if (d.deliveryResult.anomaly) {
+          if (d.deliveryResult.deliverySuccess) {
+            const finished = { ...d, status: "delivered", trackingTimeline: updatedEvents };
+            newCompleted.push(finished);
+            newStats.totalDelivered += 1;
+            if (d.deliveryResult.slaMatch) newStats.onTimeDeliveries += 1;
+            if (d.deliveryResult.costEfficient) newStats.costEfficient += 1;
+            newPoints += d.deliveryResult.points;
+            newXp += d.deliveryResult.xpGain;
+            synth.play("delivered");
+            newLog = addLog(newLog, `✅ Order #${d.id} delivered via ${d.deliveryResult.carrierName} ${d.deliveryResult.serviceName}`, "success");
+          } else {
+            // Reliability failure
+            const failed = { ...d, status: "failed", trackingTimeline: updatedEvents };
+            // Add exception event
+            failed.trackingTimeline.push({ code: "EXCEPTION", offsetHours: d.deliveryResult.durationHours, triggered: true });
+            newFailed.push(failed);
+            newStats.totalFailed += 1;
             newStats.totalAnomalies += 1;
             synth.play("anomaly");
-          } else {
-            synth.play("delivered");
+            newLog = addLog(newLog, `⚠️ Order #${d.id} FAILED — ${d.deliveryResult.carrierName} delivery exception`, "error");
           }
-          newLog = addLog(newLog, `Delivered order #${d.id} via ${d.deliveryResult.carrierName}`, "success");
-          // Update order status
-          newOrders = newOrders.map((o) => o.id === d.id ? { ...o, status: "delivered" } : o);
+          newOrders = newOrders.map((o) => o.id === d.id ? { ...o, status: d.deliveryResult.deliverySuccess ? "delivered" : "failed" } : o);
         } else {
-          stillInTransit.push({ ...d, remainingHours });
+          stillInTransit.push({ ...d, trackingTimeline: updatedEvents });
         }
       }
       newActive = stillInTransit;
 
-      // Randomly generate new orders during warehouse hours
+      // ── Check order expiry ──
+      const freshQueue = [];
+      for (const order of newQueue) {
+        if (isOrderExpired(order, newMinutes)) {
+          newExpired.push({ ...order, status: "expired" });
+          newStats.totalExpired += 1;
+          newStats.totalFailed += 1;
+          newLog = addLog(newLog, `⏰ Order #${order.id} expired! Not assigned in time.`, "error");
+          newOrders = newOrders.map((o) => o.id === order.id ? { ...o, status: "expired" } : o);
+        } else {
+          freshQueue.push(order);
+        }
+      }
+      newQueue = freshQueue;
+
+      // ── Generate new orders ──
       const warehouseOpen = isWarehouseOpen(gameHour);
       const remainingToGenerate = state.totalShipments - newOrders.length;
       if (
         warehouseOpen &&
         remainingToGenerate > 0 &&
         newQueue.length < WAREHOUSE.capacity &&
-        Math.random() < 0.25 // ~25% chance per tick to generate an order
+        Math.random() < 0.2
       ) {
-        const newOrder = generateOrder(Math.floor(gameHour));
+        const newOrder = generateOrder(newMinutes);
         newOrders = [...newOrders, newOrder];
         newQueue = [...newQueue, { ...newOrder }];
-        newLog = addLog(newLog, `New order #${newOrder.id} arrived (${newOrder.destinationTerrain}, ${newOrder.distance}km)`, "info");
+        newLog = addLog(newLog, `📥 New order #${newOrder.id} from ${newOrder.storeIcon} ${newOrder.store} → ${newOrder.zone}`, "info");
       }
 
-      // Check lose conditions
+      // ── Check lose conditions ──
       let newPhase = state.phase;
+      const totalFails = newFailed.length + newExpired.length;
       if (newMoney < LOSE_CONDITIONS.minFunds) {
         newPhase = "lost";
-        newLog = addLog(newLog, "Out of funds! Game over.", "error");
+        newLog = addLog(newLog, "💸 Out of funds! Game over.", "error");
         synth.play("gameover");
       }
-      if (newFailed.length > LOSE_CONDITIONS.maxFailedShipments) {
+      if (totalFails > LOSE_CONDITIONS.maxFailedShipments) {
         newPhase = "lost";
-        newLog = addLog(newLog, "Too many failed shipments! Game over.", "error");
+        newLog = addLog(newLog, "❌ Too many failed/expired shipments! Game over.", "error");
         synth.play("gameover");
       }
 
-      // Check win condition: all generated orders delivered
+      // ── Check win condition ──
       const allOrdersGenerated = newOrders.length >= state.totalShipments;
-      const allDelivered = allOrdersGenerated && newActive.length === 0 && newQueue.length === 0 && newCompleted.length >= state.totalShipments;
-      if (allDelivered && newPhase === "playing") {
+      const allProcessed = allOrdersGenerated && newActive.length === 0 && newQueue.length === 0;
+      const enoughDelivered = newCompleted.length >= state.totalShipments * 0.6; // 60% must be delivered to win
+      if (allProcessed && enoughDelivered && newPhase === "playing") {
         newPhase = "won";
-        newLog = addLog(newLog, "All shipments delivered! You win!", "success");
+        newLog = addLog(newLog, "🎉 All shipments processed! Great job, logistics pro!", "success");
         synth.play("win");
       }
 
@@ -180,6 +220,7 @@ function reducer(state, action) {
         activeDeliveries: newActive,
         completedDeliveries: newCompleted,
         failedDeliveries: newFailed,
+        expiredOrders: newExpired,
         money: newMoney,
         points: newPoints,
         xp: newXp,
@@ -198,46 +239,50 @@ function reducer(state, action) {
     }
 
     case "DISPATCH_ORDER": {
-      const { orderId, carrierName } = action;
+      const { orderId, carrierName, serviceName } = action;
       const order = state.warehouseQueue.find((o) => o.id === orderId);
       if (!order) return state;
 
-      const gameHour = state.gameMinutes / 60;
-      const result = calculateDelivery(order, carrierName, gameHour, state.weather);
+      const result = calculateDelivery(order, carrierName, serviceName, state.gameMinutes, state.weather);
       if (state.money < result.cost) {
         return {
           ...state,
-          log: addLog(state.log, "Not enough funds to dispatch this order!", "error"),
+          log: addLog(state.log, "💸 Not enough funds to dispatch this order!", "error"),
         };
       }
+
+      // Generate tracking timeline
+      const timeline = generateTrackingTimeline(result.sla, order.zone, result.durationHours);
+      const trackingTimeline = timeline.map((evt) => ({
+        ...evt,
+        triggered: false,
+      }));
 
       const dispatched = {
         ...order,
         status: "in_transit",
         selectedCarrier: carrierName,
+        selectedService: serviceName,
         deliveryResult: result,
-        remainingHours: result.durationHours,
+        dispatchMinutes: state.gameMinutes,
+        trackingTimeline,
       };
 
       synth.play("dispatch");
 
       const newLog = addLog(
         state.log,
-        result.anomaly
-          ? `Dispatched #${orderId} via ${carrierName} — ANOMALY: ${result.anomaly.label}!`
-          : `Dispatched #${orderId} via ${carrierName} (ETA: ${result.durationHours.toFixed(1)}h)`,
-        result.anomaly ? "warning" : "info"
+        `🏷️ Dispatched #${orderId} via ${carrierName} — ${serviceName} (₹${result.cost}, ${result.sla})`,
+        "info"
       );
 
       const newOrders = state.orders.map((o) =>
-        o.id === orderId ? { ...o, status: "in_transit", selectedCarrier: carrierName, deliveryResult: result } : o
+        o.id === orderId ? { ...o, status: "in_transit", selectedCarrier: carrierName, selectedService: serviceName, deliveryResult: result } : o
       );
 
       return {
         ...state,
         money: state.money - result.cost,
-        points: state.points + result.points,
-        xp: state.xp + result.xpGain,
         warehouseQueue: state.warehouseQueue.filter((o) => o.id !== orderId),
         activeDeliveries: [...state.activeDeliveries, dispatched],
         orders: newOrders,
@@ -261,34 +306,36 @@ function reducer(state, action) {
       return state;
     }
 
+    case "RESTART": {
+      const fresh = createInitialState();
+      resetOrderId();
+      return { ...fresh, running: true };
+    }
+
     default:
       return state;
   }
 }
 
-function addLog(log, message, type = "info") {
-  const entry = { id: Date.now() + Math.random(), message, type, ts: Date.now() };
-  return [entry, ...log].slice(0, 50); // keep last 50 entries
-}
+// ── Context + Provider ────────────────────────────────────────────────────────
 
-// ── Context ───────────────────────────────────────────────────────────────────
-
-const GameContext = createContext(null);
+const GameContext = createContext();
 
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, null, createInitialState);
-  const tickRef = useRef(null);
+  const intervalRef = useRef(null);
 
-  const tick = useCallback(() => dispatch({ type: "TICK" }), []);
+  const tick = useCallback(() => {
+    dispatch({ type: "TICK" });
+  }, []);
 
   useEffect(() => {
+    clearInterval(intervalRef.current);
     if (state.running) {
       const speed = SPEED_OPTIONS[state.speedIndex] || SPEED_OPTIONS[0];
-      tickRef.current = setInterval(tick, speed.interval);
-    } else {
-      clearInterval(tickRef.current);
+      intervalRef.current = setInterval(tick, speed.interval);
     }
-    return () => clearInterval(tickRef.current);
+    return () => clearInterval(intervalRef.current);
   }, [state.running, state.speedIndex, tick]);
 
   return (
