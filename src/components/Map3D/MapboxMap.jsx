@@ -179,8 +179,8 @@ export default function MapboxMap() {
                         data: { type: "Feature", geometry: { type: "LineString", coordinates: route } },
                         tolerance: 0 // Prevents Mapbox from simplifying the line geometry for rendering
                     });
-                    m.addLayer({ id: id+"-g", type: "line", source: id, paint: { "line-color": getCarrier(carrier).color, "line-width": 4, "line-opacity": 0.2 } });
-                    m.addLayer({ id: id+"-l", type: "line", source: id, paint: { "line-color": getCarrier(carrier).color, "line-width": 1.5, "line-opacity": 0.7, "line-dasharray": [2, 2] } });
+                    m.addLayer({ id: id+"-g", type: "line", source: id, paint: { "line-color": getCarrier(carrier).color, "line-width": 6, "line-opacity": 0.4 } });
+                    m.addLayer({ id: id+"-l", type: "line", source: id, paint: { "line-color": getCarrier(carrier).color, "line-width": 2, "line-opacity": 0.9, "line-dasharray": [2, 2] } });
                     activeRouteIdsRef.current.add(id);
                 }
             } catch(e){}

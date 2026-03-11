@@ -117,12 +117,21 @@ export default function CarrierSelectionScreen() {
   const filterBonus = activeFilters.size * FILTER_BONUS_PER;
 
   // ── Best option for Carrier Determination ──────────────────────────────
-  // Heuristic: valid + affordable, sorted by (cost ascending) so we pick most
-  // cost-efficient option which maximises the cost-efficiency scoring bonus.
-  const DETERMINATION_COST = 50; // pts deducted for using the auto-pick
-  const affordableValid = serviceOptions.filter((o) => o.valid && money >= o.cost);
-  const bestOption = affordableValid.length > 0
-    ? affordableValid.reduce((best, o) => o.cost < best.cost ? o : best, affordableValid[0])
+  // Heuristic: pick the best AFFORDABLE option. 
+  // Priority 1: Valid (meets SLA/Zone/Weight)
+  // Priority 2: Cost (cheaper is better)
+  // This ensures the button is almost never disabled if you have money and points,
+  // even if the generated order has an "impossible" deadline for the zone.
+  const DETERMINATION_COST = 50; 
+  const affordable = serviceOptions.filter((o) => money >= o.cost);
+  const bestOption = affordable.length > 0
+    ? affordable.sort((a, b) => {
+        // Always prioritize valid options first
+        if (a.valid && !b.valid) return -1;
+        if (!a.valid && b.valid) return 1;
+        // Then sort by cost (cheaper = higher efficiency score later)
+        return a.cost - b.cost;
+      })[0]
     : null;
 
   const handleSelect = (carrierName, serviceName, extraPointsDelta = 0) => {

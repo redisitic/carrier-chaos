@@ -71,7 +71,7 @@ export const CARRIERS = [
   {
     name: "FedEx",
     icon: "📦",
-    color: "#4D148C",
+    color: "#a855f7", // Bright Purple (A11y friendly)
     reliability: 0.96,
     lore: "FedEx — The Purple Machine. Born from the dreams of a Yale student who scraped a 'C' on the business plan that would change the world. Their overnight network stretches across every major Indian metro, humming 24 hours a day.",
     pros: ["Highest metro coverage", "DG certified on all tiers", "Industry-leading tracking"],
@@ -85,7 +85,7 @@ export const CARRIERS = [
   {
     name: "UPS",
     icon: "🟤",
-    color: "#8B5E3C",
+    color: "#f59e0b", // Bright Amber
     reliability: 0.95,
     lore: "UPS — Brown. Boring. Brilliant. United Parcel Service has been delivering since 1907. They invented the science of delivery route optimisation — their drivers turn left as rarely as possible to save fuel. In India, they dominate corporate B2B freight.",
     pros: ["Excellent B2B network", "High weight tolerance", "Ground freight specialty"],
@@ -99,7 +99,7 @@ export const CARRIERS = [
   {
     name: "DHL",
     icon: "✈️",
-    color: "#FFCC00",
+    color: "#fbbf24", // Bright Gold
     reliability: 0.97,
     lore: "DHL — Delivering Happiness Logistically. Founded in 1969 to courier documents between Honolulu and San Francisco. Now they move 1.8 billion parcels a year. In India, DHL's aviation connections make them the top pick for air-sensitive cargo.",
     pros: ["Highest reliability in market (97%)", "Best DG handling", "Widest air network"],
@@ -113,7 +113,7 @@ export const CARRIERS = [
   {
     name: "Delhivery",
     icon: "🚛",
-    color: "#E31E25",
+    color: "#ef4444", // Pure Red
     reliability: 0.91,
     lore: "Delhivery — India's own logistics giant. Founded in 2011 in a Gurgaon garage by five ex-consultants. Now they run 24 automated sorting centers and 2,800 delivery points. They built their own route-optimisation AI. Affordable, scrappy, remarkably wide-reaching.",
     pros: ["Cheapest rates in market", "Pan-India including Rural", "Best for high-volume eCommerce"],
@@ -127,7 +127,7 @@ export const CARRIERS = [
   {
     name: "Bluedart",
     icon: "🔵",
-    color: "#003DA5",
+    color: "#38bdf8", // Sky Blue
     reliability: 0.93,
     lore: "Bluedart — India's original premium courier. Established 1983, acquired by DHL in 2004 but operates independently. They pioneered overnight delivery in India before most cities had proper roads. Their Dart brand is synonymous with speed among Indian CFOs.",
     pros: ["Strong same-day metro brand", "DG certified on Apex tiers", "Trusted by Indian enterprises"],
@@ -141,7 +141,7 @@ export const CARRIERS = [
   {
     name: "Maersk",
     icon: "🚢",
-    color: "#0082ba",
+    color: "#2dd4bf", // Teal/Cyan
     reliability: 0.94,
     lore: "Maersk — The Container King. A.P. Møller-Maersk has been sailing since 1904 and operates the world's largest container fleet. Their inland logistics arm in India handles coastal freight from Nhava Sheva to Krishnapatnam. Slow but unstoppable — like a fully-loaded bulk carrier.",
     pros: ["Handles heaviest cargo (up to 1000kg)", "Full DG certification", "Lowest ₹/kg on bulk loads"],
