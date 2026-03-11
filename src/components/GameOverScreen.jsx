@@ -1,12 +1,20 @@
+import { useState, useEffect } from "react";
 import { useGame } from "../context/GameContext";
 import { xpLevel } from "../game/logic";
+import { saveScore } from "../game/storage";
+import LeaderboardScreen from "./LeaderboardScreen";
 
 export default function GameOverScreen() {
   const { state, dispatch } = useGame();
-  const { phase, points, xp, money, stats } = state;
+  const { phase, points, xp, stats } = state;
   const { level, title } = xpLevel(xp);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   const won = phase === "won";
+
+  useEffect(() => {
+    saveScore({ points, delivered: stats.totalDelivered });
+  }, [points, stats.totalDelivered]);
 
   return (
     <div className="screen gameover-screen">
@@ -19,8 +27,8 @@ export default function GameOverScreen() {
           {won
             ? "All shipments delivered. Outstanding logistics management!"
             : stats.totalFailed > 5
-            ? "Too many shipments failed. The supply chain collapsed."
-            : "You ran out of funds. The operation shut down."}
+              ? "Too many shipments failed. The supply chain collapsed."
+              : "You ran out of funds. The operation shut down."}
         </p>
 
         <div className="gameover-stats">
@@ -50,15 +58,25 @@ export default function GameOverScreen() {
           </div>
         </div>
 
-        <div className="gameover-actions">
+        <div className="gameover-actions" style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
           <button
             className="btn-primary"
             onClick={() => dispatch({ type: "START_GAME" })}
           >
             Play Again
           </button>
+          <button
+            className="btn-primary"
+            style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)" }}
+            onClick={() => setShowLeaderboard(true)}
+          >
+            🏅 Leaderboard
+          </button>
         </div>
       </div>
+      {showLeaderboard && (
+        <LeaderboardScreen onClose={() => setShowLeaderboard(false)} />
+      )}
     </div>
   );
 }

@@ -5,7 +5,10 @@ import {
   ANOMALIES,
   SCORE,
   WAREHOUSE,
+  RUSH_HOURS,
+  RUSH_MULTIPLIER,
 } from "./constants";
+import { getWeatherMultiplier } from "./weather";
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -45,19 +48,49 @@ export function resetOrderId() {
   _orderId = 100;
 }
 
+// ── Dynamic pricing ──────────────────────────────────────────────────────────
+
+/** Returns true if the given hour falls within a rush period. */
+export function isRushHour(gameHour) {
+  return RUSH_HOURS.some((rh) => gameHour >= rh.start && gameHour < rh.end);
+}
+
+/** Get dynamic cost for a carrier at the given game hour. */
+export function getCarrierCost(carrier, gameHour) {
+  const base = carrier.costPerShipment;
+  if (isRushHour(gameHour)) {
+    return Math.round(base * RUSH_MULTIPLIER);
+  }
+  return base;
+}
+
+/** Get cost trend: "up" during rush, "down" just after rush, "stable" otherwise. */
+export function getCostTrend(gameHour) {
+  if (isRushHour(gameHour)) return "up";
+  // Just after rush (within 1 hour)
+  if (RUSH_HOURS.some((rh) => gameHour >= rh.end && gameHour < rh.end + 1)) return "down";
+  return "stable";
+}
+
 // ── Delivery calculation ──────────────────────────────────────────────────────
 
 /**
  * Returns delivery result object:
  * { durationHours, anomaly, points, xpGain, cost, isLate, wrongTerrain }
  */
-export function calculateDelivery(order, carrierName) {
+export function calculateDelivery(order, carrierName, gameHour = 12, weather = null) {
   const carrier = CARRIERS.find((c) => c.name === carrierName);
   const basePenalty = TERRAIN_PENALTY[order.destinationTerrain];
   const terrainMatch = carrier.preferredTerrains.includes(order.destinationTerrain);
   const penalty = terrainMatch ? basePenalty * 0.6 : basePenalty;
 
   let durationHours = (order.distance / carrier.speed) * penalty;
+
+  // Apply weather multiplier
+  if (weather) {
+    const weatherMult = getWeatherMultiplier(weather, order.destinationTerrain);
+    durationHours *= weatherMult;
+  }
 
   // Anomaly check
   let anomaly = null;
@@ -83,7 +116,9 @@ export function calculateDelivery(order, carrierName) {
   if (wrongTerrain) points += SCORE.wrongTerrainCarrier;
 
   const xpGain = Math.max(1, Math.floor(points / 10));
-  const cost = carrier.costPerShipment;
+  // Use dynamic pricing
+  const cost = getCarrierCost(carrier, gameHour);
+
 
   return {
     carrierName,

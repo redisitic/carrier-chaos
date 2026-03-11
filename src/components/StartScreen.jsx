@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { useGame } from "../context/GameContext";
+import LeaderboardScreen from "./LeaderboardScreen";
 
 export default function StartScreen() {
   const { dispatch } = useGame();
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   return (
     <div className="screen start-screen">
@@ -36,13 +39,25 @@ export default function StartScreen() {
           <div className="mini-carrier" style={{ borderColor: "#06b6d4" }}>🚢 RiverLine — Waterway, 24h</div>
         </div>
 
-        <button
-          className="btn-primary btn-large"
-          onClick={() => dispatch({ type: "START_GAME" })}
-        >
-          Start Simulation
-        </button>
+        <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+          <button
+            className="btn-primary btn-large"
+            onClick={() => dispatch({ type: "START_GAME" })}
+          >
+            Start Simulation
+          </button>
+          <button
+            className="btn-primary btn-large"
+            style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)" }}
+            onClick={() => setShowLeaderboard(true)}
+          >
+            🏅 Leaderboard
+          </button>
+        </div>
       </div>
+      {showLeaderboard && (
+        <LeaderboardScreen onClose={() => setShowLeaderboard(false)} />
+      )}
     </div>
   );
 }

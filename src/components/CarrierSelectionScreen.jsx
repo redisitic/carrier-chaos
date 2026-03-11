@@ -1,12 +1,20 @@
 import { useGame } from "../context/GameContext";
 import { CARRIERS, TERRAIN_PENALTY } from "../game/constants";
-import { isCarrierAvailable } from "../game/logic";
+import { isCarrierAvailable, getCarrierCost, getCostTrend } from "../game/logic";
+import AnimatedCarrier from "./AnimatedCarrier";
 
 const TERRAIN_ICONS = {
   Urban: "🏙️",
   Rugged: "🪨",
   Waterway: "🌊",
   Mountain: "⛰️",
+};
+
+const carrierTypeMap = {
+  CityExpress: "truck",
+  EcoShip: "van",
+  MountainGo: "helicopter",
+  RiverLine: "ship",
 };
 
 export default function CarrierSelectionScreen() {
@@ -70,12 +78,23 @@ export default function CarrierSelectionScreen() {
               style={{ "--carrier-color": carrier.color }}
             >
               <div className="carrier-card-header">
-                <span className="carrier-icon">{carrier.icon}</span>
+                <span className="carrier-icon-animated">
+                  <AnimatedCarrier
+                    type={carrierTypeMap[carrier.name] || "truck"}
+                    color={carrier.color}
+                    size={40}
+                    animate={!disabled}
+                  />
+                </span>
                 <div>
                   <div className="carrier-name">{carrier.name}</div>
                   {isMatch && <div className="match-badge">Best Match</div>}
                 </div>
-                <div className="carrier-cost">${carrier.costPerShipment}</div>
+                <div className="carrier-cost">
+                  ${getCarrierCost(carrier, gameHour)}
+                  {getCostTrend(gameHour) === "up" && <span style={{ color: "var(--warning)", marginLeft: 2 }}>↗</span>}
+                  {getCostTrend(gameHour) === "down" && <span style={{ color: "var(--success)", marginLeft: 2 }}>↘</span>}
+                </div>
               </div>
 
               <div className="carrier-attrs">

@@ -702,3 +702,287 @@ small { font-size: 0.75em; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #4a5568; }
+
+/* ── Animated Carrier Sprites ────────────────────────────────────────────── */
+
+/* Truck */
+.sprite-truck {
+  position: relative;
+  animation: truck-bounce 0.6s ease-in-out infinite;
+}
+.sprite-truck .sprite-body { position: relative; z-index: 1; }
+.sprite-truck .sprite-wheels {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20%;
+}
+.sprite-wheel {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: wheel-spin 0.3s linear infinite;
+}
+.sprite-exhaust {
+  position: absolute;
+  bottom: 8px;
+  left: -4px;
+  width: 5px;
+  height: 5px;
+  background: #94a3b8;
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: exhaust-puff 0.8s ease-out infinite;
+}
+
+@keyframes truck-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes wheel-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes exhaust-puff {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  100% { transform: translate(-8px, -6px) scale(2); opacity: 0; }
+}
+
+/* Van / EcoShip */
+.sprite-van {
+  position: relative;
+  animation: van-drive 1s ease-in-out infinite;
+}
+.sprite-van .sprite-body { position: relative; z-index: 1; }
+.sprite-leaf-particles {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  pointer-events: none;
+}
+.leaf-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  animation: leaf-float 1.2s ease-out infinite;
+}
+
+@keyframes van-drive {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(1px); }
+  75% { transform: translateX(-1px); }
+}
+@keyframes leaf-float {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  100% { transform: translate(10px, -12px) scale(0.3); opacity: 0; }
+}
+
+/* Helicopter */
+.sprite-helicopter {
+  position: relative;
+  animation: heli-hover 1.2s ease-in-out infinite;
+}
+.sprite-helicopter .sprite-body { position: relative; z-index: 1; }
+.sprite-rotor {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 3px;
+  border-top: 2px solid;
+  animation: rotor-spin 0.15s linear infinite;
+  opacity: 0.7;
+}
+.sprite-downdraft {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 2px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 50%;
+  animation: downdraft-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes heli-hover {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes rotor-spin {
+  0% { transform: translateX(-50%) scaleX(1); }
+  50% { transform: translateX(-50%) scaleX(0.2); }
+  100% { transform: translateX(-50%) scaleX(1); }
+}
+@keyframes downdraft-pulse {
+  0%, 100% { transform: translateX(-50%) scaleX(0.6); opacity: 0.15; }
+  50% { transform: translateX(-50%) scaleX(1.2); opacity: 0.35; }
+}
+
+/* Ship */
+.sprite-ship {
+  position: relative;
+  animation: ship-rock 2s ease-in-out infinite;
+}
+.sprite-ship .sprite-body { position: relative; z-index: 1; }
+.sprite-waves {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.wave {
+  position: absolute;
+  bottom: 0;
+  height: 3px;
+  width: 120%;
+  border-radius: 50%;
+  opacity: 0.3;
+}
+.wave-1 { animation: wave-move 1.5s ease-in-out infinite; left: -10%; }
+.wave-2 { animation: wave-move 1.5s ease-in-out infinite 0.5s; left: -20%; }
+
+@keyframes ship-rock {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(2deg) translateY(-1px); }
+  75% { transform: rotate(-2deg) translateY(1px); }
+}
+@keyframes wave-move {
+  0% { transform: translateX(-5%); }
+  50% { transform: translateX(5%); }
+  100% { transform: translateX(-5%); }
+}
+
+/* ── Warehouse Workers ───────────────────────────────────────────────────── */
+.workers-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.workers-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.workers-count { color: var(--success); font-weight: 600; }
+
+.workers-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.worker-sprite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  min-width: 44px;
+  transition: all 0.3s;
+}
+
+.worker-busy {
+  background: #14532d22;
+  border-color: #22c55e44;
+  animation: worker-bob 0.8s ease-in-out infinite;
+}
+.worker-idle {
+  opacity: 0.5;
+  animation: worker-breathe 2s ease-in-out infinite;
+}
+.worker-emoji { font-size: 18px; }
+.worker-box {
+  font-size: 12px;
+  animation: box-carry 0.6s ease-in-out infinite;
+}
+.worker-status { font-size: 10px; }
+
+@keyframes worker-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes worker-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.05); opacity: 0.65; }
+}
+@keyframes box-carry {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-2px) rotate(-3deg); }
+  75% { transform: translateY(-1px) rotate(3deg); }
+}
+
+/* ── Order Card Animations ───────────────────────────────────────────────── */
+.order-card {
+  animation: order-slide-in 0.35s ease-out;
+}
+@keyframes order-slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Active delivery pulse on tracking cards */
+.tracking-card {
+  animation: tracking-fade-in 0.3s ease-out;
+}
+@keyframes tracking-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Anomaly notice blink */
+.anomaly-notice {
+  animation: anomaly-blink 1.5s ease-in-out infinite;
+}
+@keyframes anomaly-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Status pulse for queued badge */
+.count-badge.in-transit {
+  animation: badge-pulse 1.5s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0); }
+}
+
+/* Carrier card hover lift enhanced */
+.carrier-card:hover:not(.disabled) {
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+}
+
+/* Completed row success flash */
+.compact-row.success {
+  animation: success-flash 0.5s ease-out;
+}
+@keyframes success-flash {
+  0% { background: #22c55e33; }
+  100% { background: #14532d22; }
+}
+
+/* Animated carrier on carrier selection */
+.carrier-icon-animated {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

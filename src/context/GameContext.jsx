@@ -5,25 +5,37 @@ import {
   TICK_INTERVAL_MS,
   MINUTES_PER_TICK,
   LOSE_CONDITIONS,
+  SPEED_OPTIONS,
+  WEATHER_TYPES,
+  WEATHER_CHANGE_INTERVAL,
 } from "../game/constants";
 import {
   generateOrder,
   calculateDelivery,
   isWarehouseOpen,
-  maxConcurrentProcessing,
   resetOrderId,
+  getCarrierCost,
 } from "../game/logic";
+import { getNextWeather } from "../game/weather";
+import { synth } from "../hooks/useAudio";
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
 function createInitialState() {
   return {
-    // Clock: in-game minutes from midnight. Start at 08:45 so action starts at 09:00.
+    // Clock
     gameMinutes: 8 * 60 + 45,
     day: 1,
     running: false,
-    screen: "warehouse", // warehouse | carrier | tracking | stats | gameover
-    phase: "playing", // playing | won | lost
+    screen: "warehouse",
+    phase: "playing",
+
+    // Speed control
+    speedIndex: 0, // index into SPEED_OPTIONS
+
+    // Weather
+    weather: WEATHER_TYPES[0], // start clear
+    lastWeatherChange: 0,
 
     // Player resources
     money: INITIAL_PLAYER.money,
@@ -32,15 +44,15 @@ function createInitialState() {
     points: INITIAL_PLAYER.points,
 
     // Orders
-    orders: [], // all orders seen so far
-    warehouseQueue: [], // waiting / processing
-    activeDeliveries: [], // in transit (have a carrier assigned)
+    orders: [],
+    warehouseQueue: [],
+    activeDeliveries: [],
     completedDeliveries: [],
     failedDeliveries: [],
 
     // UI state
     selectedOrderId: null,
-    log: [], // event log entries
+    log: [],
     stats: {
       totalDelivered: 0,
       totalFailed: 0,
@@ -83,6 +95,19 @@ function reducer(state, action) {
       let newStats = { ...state.stats };
       let newOrders = [...state.orders];
 
+      let newWeather = state.weather;
+      let newLastWeatherChange = state.lastWeatherChange;
+
+      // Weather checks
+      const nextChangeCheck = newLastWeatherChange + WEATHER_CHANGE_INTERVAL;
+      if (newMinutes >= nextChangeCheck) {
+        newWeather = getNextWeather(state.weather.type);
+        newLastWeatherChange = newMinutes;
+        if (newWeather.type !== state.weather.type) {
+          newLog = addLog(newLog, `Weather changed to ${newWeather.label} ${newWeather.icon}`, "info");
+        }
+      }
+
       // Advance in-transit timers
       const stillInTransit = [];
       for (const d of newActive) {
@@ -94,7 +119,12 @@ function reducer(state, action) {
           newStats.totalDelivered += 1;
           if (d.deliveryResult.isFast) newStats.fastDeliveries += 1;
           if (d.deliveryResult.terrainMatch) newStats.correctCarrierChoices += 1;
-          if (d.deliveryResult.anomaly) newStats.totalAnomalies += 1;
+          if (d.deliveryResult.anomaly) {
+            newStats.totalAnomalies += 1;
+            synth.play("anomaly");
+          } else {
+            synth.play("delivered");
+          }
           newLog = addLog(newLog, `Delivered order #${d.id} via ${d.deliveryResult.carrierName}`, "success");
           // Update order status
           newOrders = newOrders.map((o) => o.id === d.id ? { ...o, status: "delivered" } : o);
@@ -124,10 +154,12 @@ function reducer(state, action) {
       if (newMoney < LOSE_CONDITIONS.minFunds) {
         newPhase = "lost";
         newLog = addLog(newLog, "Out of funds! Game over.", "error");
+        synth.play("gameover");
       }
       if (newFailed.length > LOSE_CONDITIONS.maxFailedShipments) {
         newPhase = "lost";
         newLog = addLog(newLog, "Too many failed shipments! Game over.", "error");
+        synth.play("gameover");
       }
 
       // Check win condition: all generated orders delivered
@@ -136,6 +168,7 @@ function reducer(state, action) {
       if (allDelivered && newPhase === "playing") {
         newPhase = "won";
         newLog = addLog(newLog, "All shipments delivered! You win!", "success");
+        synth.play("win");
       }
 
       return {
@@ -152,6 +185,8 @@ function reducer(state, action) {
         xp: newXp,
         log: newLog,
         stats: newStats,
+        weather: newWeather,
+        lastWeatherChange: newLastWeatherChange,
         phase: newPhase,
         running: newPhase === "playing",
         screen: newPhase !== "playing" ? "gameover" : state.screen,
@@ -167,7 +202,8 @@ function reducer(state, action) {
       const order = state.warehouseQueue.find((o) => o.id === orderId);
       if (!order) return state;
 
-      const result = calculateDelivery(order, carrierName);
+      const gameHour = state.gameMinutes / 60;
+      const result = calculateDelivery(order, carrierName, gameHour, state.weather);
       if (state.money < result.cost) {
         return {
           ...state,
@@ -182,6 +218,8 @@ function reducer(state, action) {
         deliveryResult: result,
         remainingHours: result.durationHours,
       };
+
+      synth.play("dispatch");
 
       const newLog = addLog(
         state.log,
@@ -215,6 +253,14 @@ function reducer(state, action) {
     case "TOGGLE_PAUSE":
       return { ...state, running: !state.running };
 
+    case "SET_SPEED": {
+      const idx = action.speedIndex;
+      if (idx >= 0 && idx < SPEED_OPTIONS.length) {
+        return { ...state, speedIndex: idx };
+      }
+      return state;
+    }
+
     default:
       return state;
   }
@@ -237,12 +283,13 @@ export function GameProvider({ children }) {
 
   useEffect(() => {
     if (state.running) {
-      tickRef.current = setInterval(tick, TICK_INTERVAL_MS);
+      const speed = SPEED_OPTIONS[state.speedIndex] || SPEED_OPTIONS[0];
+      tickRef.current = setInterval(tick, speed.interval);
     } else {
       clearInterval(tickRef.current);
     }
     return () => clearInterval(tickRef.current);
-  }, [state.running, tick]);
+  }, [state.running, state.speedIndex, tick]);
 
   return (
     <GameContext.Provider value={{ state, dispatch }}>
