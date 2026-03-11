@@ -78,6 +78,7 @@ function createInitialState() {
       costEfficient: 0,
     },
     pastDays: [],
+    toast: null,
   };
 }
 
@@ -87,7 +88,7 @@ function addLog(log, message, type = "info") {
   return [{ message, type, time: Date.now() }, ...log].slice(0, 50);
 }
 
-/** Calculate money earned at end of day based on points scored (₹15 per point, min ₹0) */
+/** Calculate money earned at end of shift based on points scored (₹15 per point, min ₹0) */
 function calcDailyEarnings(dailyPoints) {
   return Math.max(0, Math.round(dailyPoints * 15));
 }
@@ -99,11 +100,11 @@ function triggerEOD(state) {
     ...state.pastDays,
     { day: state.day, points: state.dailyPoints, stats: state.dailyStats, moneyEarned: dailyMoneyEarned },
   ];
-  let newLog = addLog(state.log, `🌇 Day ${state.day} complete — 5:00 PM. Review your EOD report!`, "info");
+  let newLog = addLog(state.log, `🌇 Shift ${state.day} complete — 5:00 PM. Review your end-of-shift report!`, "info");
   if (dailyMoneyEarned > 0) {
-    newLog = addLog(newLog, `💰 Day ${state.day} payout: ₹${dailyMoneyEarned.toLocaleString()} credited (${state.dailyPoints} pts × ₹15)`, "success");
+    newLog = addLog(newLog, `💰 Shift ${state.day} payout: ₹${dailyMoneyEarned.toLocaleString()} credited (${state.dailyPoints} pts × ₹15)`, "success");
   } else {
-    newLog = addLog(newLog, `📉 No payout today — points must be positive to earn end-of-day revenue.`, "warning");
+    newLog = addLog(newLog, `📉 No payout this shift — points must be positive to earn end-of-shift revenue.`, "warning");
   }
   return {
     ...state,
@@ -322,7 +323,7 @@ function reducer(state, action) {
         dailyPoints: 0,
         dailyStats: { delivered: 0, failed: 0, expired: 0, costEfficient: 0 },
         running: true,
-        log: addLog(state.log, `🔄 Day ${state.day} restarted — clock reset to 09:00.`, "info"),
+        log: addLog(state.log, `🔄 Shift ${state.day} restarted — clock reset to 09:00.`, "info"),
       };
     }
 
@@ -374,6 +375,10 @@ function reducer(state, action) {
         bonusPoints = filterBonus;
         bonusDailyPoints = filterBonus;
         newLog = addLog(newLog, `📌 Smart Dispatch +${filterBonus} pts (${filterBonus / 2} filter${filterBonus / 2 > 1 ? "s" : ""} × 2)`, "success");
+      } else if (filterBonus < 0) {
+        bonusPoints = filterBonus;
+        bonusDailyPoints = filterBonus;
+        newLog = addLog(newLog, `🔥 Carrier Determination used — ${filterBonus} pts`, "warning");
       }
 
       const newOrders = state.orders.map((o) =>
@@ -396,6 +401,9 @@ function reducer(state, action) {
 
     case "SET_SCREEN":
       return { ...state, screen: action.screen };
+
+    case "SET_TOAST":
+      return { ...state, toast: action.toast ?? null };
 
     case "TOGGLE_PAUSE":
       return { ...state, running: !state.running };

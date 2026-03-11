@@ -29,17 +29,22 @@ export function randFrom(arr) {
 }
 
 /**
- * Converts a total number of game minutes into a formatted "Day X, HH:MM" string.
+ * Converts a total number of game minutes into a formatted "Shift X, HH:MM" string.
  */
 export function formatDeliveryDate(minutes) {
-  const d = Math.floor(minutes / (24 * 60)) + 1;
-  const h = Math.floor((minutes % (24 * 60)) / 60);
-  const m = Math.floor(minutes % 60);
+  const shiftLengthMinutes = 8 * 60; // 09:00–17:00 = 480 min
+  const shiftStartMinutes = 9 * 60;  // shifts start at 09:00
+  // Each shift starts at 09:00; compute which shift number and offset within it
+  const offsetFromFirst = minutes - shiftStartMinutes;
+  const s = Math.max(1, Math.floor(offsetFromFirst / shiftLengthMinutes) + 1);
+  const withinShift = ((minutes - shiftStartMinutes) % shiftLengthMinutes + shiftLengthMinutes) % shiftLengthMinutes;
+  const h = Math.floor(withinShift / 60) + 9; // 09:00 base
+  const m = Math.floor(withinShift % 60);
 
-  const hh = h.toString().padStart(2, "0");
-  const mm = m.toString().padStart(2, "0");
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
 
-  return `Day ${d}, ${hh}:${mm}`;
+  return `Shift ${s}, ${hh}:${mm}`;
 }
 
 // ── Order generation ──────────────────────────────────────────────────────────
@@ -67,7 +72,8 @@ const PRODUCTS = [
   "Jump Starter Kit", "USB Car Charger", "Parking Sensor Kit", "Seat Cushion Gel",
   "Office Chair Mat", "Monitor Arm", "Desk Organiser", "Cable Management Kit",
   "Power Strip Surge", "Smart Plug 4-Pack", "Security Camera", "Door Sensor Kit",
-  "Robot Vacuum", "Steam Mop", "Water Filter Pitcher", "Shower Filter",
+  "Robot Vacuum", "Steam Mop", "Water Filter Pitcher", "Shower Filter", "Thomas and his friends",
+  "Harsh"
 ];
 
 // ── Destination Cities ────────────────────────────────────────────────────────

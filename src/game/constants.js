@@ -154,11 +154,13 @@ export const CARRIERS = [
 ];
 
 // ── SLA to hours mapping ────────────────────────────────────────────────────
+// Expressed in in-game hours (1 in-game hour = 60 in-game minutes).
+// Scaled so deliveries complete within 1-2 shifts rather than real days.
 export const SLA_HOURS = {
-  "same-day": 6,
-  "next-day": 24,
-  "3-5 day": 96,    // ~4 days avg
-  "5-7 day": 144,   // ~6 days avg
+  "same-day": 0.4,    // ~24 in-game minutes
+  "next-day": 0.75,   // ~45 in-game minutes
+  "3-5 day":  1.5,    // ~90 in-game minutes
+  "5-7 day":  2.5,    // ~150 in-game minutes
 };
 
 // ── Deadline options ────────────────────────────────────────────────────────
@@ -199,7 +201,7 @@ export const LOSE_CONDITIONS = { minFunds: 0 };
 export const ORDER_EXPIRY_MINUTES = 180;  // 3 in-game hours to assign
 
 // ── Game clock ──────────────────────────────────────────────────────────────
-// Day = 09:00–17:00 (480 in-game minutes).
+// Shift = 09:00–17:00 (480 in-game minutes).
 // At 1×: 625 ms/tick, 1 min/tick → 480 ticks × 0.625 s = 300 s = 5 real minutes.
 // Every single minute is displayed; no decimal jumping.
 export const TICK_INTERVAL_MS = 625;

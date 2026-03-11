@@ -87,7 +87,7 @@ export default function StatsScreen() {
       </div>
 
       {/* Charts */}
-      <div className="charts-row">
+      <div className="charts-row h-20vh">
         <div className="panel chart-panel">
           <div className="panel-header"><h3>Deliveries by Carrier</h3></div>
           <Bar
@@ -101,20 +101,6 @@ export default function StatsScreen() {
               },
             }}
           />
-        </div>
-        <div className="panel chart-panel">
-          <div className="panel-header"><h3>Terrain Breakdown</h3></div>
-          <div className="doughnut-wrap">
-            <Doughnut
-              data={doughnutData}
-              options={{
-                responsive: true,
-                plugins: {
-                  legend: { position: "bottom", labels: { color: "#94a3b8" } },
-                },
-              }}
-            />
-          </div>
         </div>
       </div>
     </div>

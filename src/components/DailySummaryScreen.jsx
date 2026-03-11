@@ -1,8 +1,22 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useGame } from "../context/GameContext";
+import indianSong from "../assets/indian-song.mp3";
 
 export default function DailySummaryScreen() {
   const { state, dispatch } = useGame();
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    const audio = new Audio(indianSong);
+    audio.loop = true;
+    audio.volume = 0.6;
+    audio.play().catch(() => {});
+    audioRef.current = audio;
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
 
   // The most recent past day is the one that just finished
   const todayEntry = state.pastDays[state.pastDays.length - 1];
@@ -17,8 +31,8 @@ export default function DailySummaryScreen() {
   return (
     <div className="screen summary-screen">
       <div className="summary-card">
-        <h2 className="summary-title">🌇 End of Day {day}</h2>
-        <p className="summary-sub">Business hours closed — 5:00 PM. Review today's performance before tomorrow.</p>
+        <h2 className="summary-title">🌇 End of Shift {day}</h2>
+        <p className="summary-sub">Shift closed — 5:00 PM. Review this shift’s performance before the next one.</p>
 
         <div className="summary-stats">
           <div className="stat-box" style={{ borderColor: "rgba(34, 197, 94, 0.3)" }}>
@@ -29,7 +43,7 @@ export default function DailySummaryScreen() {
           </div>
 
           <div className="stat-box" style={{ borderColor: "rgba(245, 158, 11, 0.3)" }}>
-            <span className="stat-label">💰 Day Earnings</span>
+            <span className="stat-label">💰 Shift Earnings</span>
             <span className="stat-value" style={{ color: moneyEarned > 0 ? "#f59e0b" : "#64748b" }}>
               {moneyEarned > 0 ? `₹${moneyEarned.toLocaleString()}` : "₹0"}
             </span>
@@ -39,7 +53,7 @@ export default function DailySummaryScreen() {
           </div>
 
           <div className="stat-box">
-            <span className="stat-label">Delivered Today</span>
+            <span className="stat-label">Delivered This Shift</span>
             <span className="stat-value" style={{ color: "#38bdf8" }}>{stats.delivered}</span>
           </div>
 
@@ -67,7 +81,7 @@ export default function DailySummaryScreen() {
           <h3>Performance Insights</h3>
           <ul>
             <li>
-              <strong>Cost Efficiency:</strong> You selected the cheapest valid carrier {stats.costEfficient} times today.
+              <strong>Cost Efficiency:</strong> You selected the cheapest valid carrier {stats.costEfficient} times this shift.
             </li>
             {stats.failed > 0 && (
               <li style={{ color: "#ef4444" }}>
@@ -76,19 +90,19 @@ export default function DailySummaryScreen() {
             )}
             {points < 0 && (
               <li style={{ color: "#f59e0b" }}>
-                <strong>Cost Control:</strong> You lost points overall today. Ensure you are not overspending on premium services for slow orders or violating Service Level Agreements.
+                <strong>Cost Control:</strong> You lost points this shift. Ensure you are not overspending on premium services for slow orders or violating Service Level Agreements.
               </li>
             )}
             {points >= 100 && (
               <li style={{ color: "#22c55e" }}>
-                <strong>Excellent Work:</strong> A highly profitable day! Great carrier determination.
+                <strong>Excellent Work:</strong> A highly profitable shift! Great carrier determination.
               </li>
             )}
           </ul>
         </div>
 
         <button className="primary-btn pulse-glow" onClick={handleNextDay}>
-          Begin Day {day + 1} ☀️
+          Begin Shift {day + 1} ☀️
         </button>
       </div>
 

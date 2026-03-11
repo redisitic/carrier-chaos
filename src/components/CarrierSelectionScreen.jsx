@@ -92,7 +92,7 @@ export default function CarrierSelectionScreen() {
       switch (flag) {
         case "dg":      if (!opt.dg) return true; break;
         case "no-dg":   if (opt.dg) return true; break;
-        case "fragile": if (opt.slaHours > 72) return true; break;
+        case "fragile": if (opt.slaHours > 1.5) return true; break;
         case "durable": break;
         case "zone":    if (svcData && !svcData.zones.includes(order.zone)) return true; break;
         case "heavy":   if (opt.maxWeight < order.weight) return true; break;
@@ -132,6 +132,7 @@ export default function CarrierSelectionScreen() {
 
   const handleDetermination = () => {
     if (!bestOption || state.points < DETERMINATION_COST) return;
+    dispatch({ type: "SET_TOAST", toast: `🔥 Auto-selected: ${bestOption.carrierName} · ${bestOption.serviceName} (₹${bestOption.cost})` });
     handleSelect(bestOption.carrierName, bestOption.serviceName, -DETERMINATION_COST);
   };
 
@@ -308,7 +309,7 @@ export default function CarrierSelectionScreen() {
           className={`determination-btn${!bestOption || state.points < DETERMINATION_COST ? " determination-disabled" : ""}`}
           onClick={handleDetermination}
           disabled={!bestOption || state.points < DETERMINATION_COST}
-          title={!bestOption ? "No valid affordable option available" : state.points < DETERMINATION_COST ? `Need ${DETERMINATION_COST} pts to use` : `Auto-select ${bestOption.carrierName} · ${bestOption.serviceName} (₹${bestOption.cost}) — costs ${DETERMINATION_COST} pts`}
+          title={!bestOption ? "No valid affordable option available" : state.points < DETERMINATION_COST ? `Need ${DETERMINATION_COST} pts to use` : `AI auto-picks the best carrier — costs ${DETERMINATION_COST} pts`}
         >
           🔥 Carrier Determination
           <span className="determination-cost">−{DETERMINATION_COST} pts</span>

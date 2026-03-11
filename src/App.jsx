@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { GameProvider, useGame } from "./context/GameContext";
 import HUD from "./components/HUD";
 import StartScreen from "./components/StartScreen";
@@ -12,8 +12,14 @@ const MapboxMap = lazy(() => import("./components/Map3D/MapboxMap"));
 import "./App.css";
 
 function GameRouter() {
-  const { state } = useGame();
-  const { screen, phase, running, orders } = state;
+  const { state, dispatch } = useGame();
+  const { screen, phase, running, orders, toast } = state;
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => dispatch({ type: "SET_TOAST", toast: null }), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Not started yet
   if (orders.length === 0 && !running && phase === "playing") {
@@ -34,6 +40,7 @@ function GameRouter() {
   return (
     <div className="game-layout">
       <HUD />
+      {toast && <div className="determination-toast">{toast}</div>}
       <main className="game-main">
         {screen === "warehouse" && <WarehouseScreen />}
         {screen === "carrier" && <CarrierSelectionScreen />}

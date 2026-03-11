@@ -99,7 +99,7 @@ function HudTicker({ weather, day, dailyPoints, stats, warehouseQueue, activeDel
     },
     {
       icon: "📈",
-      label: `Day ${day} · ${dailyPoints >= 0 ? "+" : ""}${dailyPoints} pts`,
+      label: `Shift ${day} · ${dailyPoints >= 0 ? "+" : ""}${dailyPoints} pts`,
       sub: `${stats.totalDelivered} delivered · ${stats.totalFailed} failed · Earn ₹${Math.max(0, dailyPoints * 10).toLocaleString()} at EOD`,
       color: dailyPoints >= 0 ? "#22c55e" : "#ef4444",
     },
@@ -233,7 +233,7 @@ export default function HUD() {
         </div>
 
         <div className="hud-clock">
-          <span className="clock-day">Day {day}</span>
+          <span className="clock-day">Shift {day}</span>
           <span className="clock-time">{formatTime(gameMinutes)}</span>
         </div>
 
@@ -266,7 +266,7 @@ export default function HUD() {
             className={`nav-btn ${state.screen === "map" ? "active" : ""}`}
             onClick={() => dispatch({ type: "SET_SCREEN", screen: "map" })}
           >
-            🗺️ 3D Map
+            3D Map
           </button>
           <button
             className={`nav-btn ${state.screen === "stats" ? "active" : ""}`}
