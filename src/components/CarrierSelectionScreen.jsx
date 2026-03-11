@@ -1,6 +1,6 @@
 import { useGame } from "../context/GameContext";
-import { CARRIERS } from "../game/constants";
-import { getServiceOptions, getCostTrend, getExpiryProgress } from "../game/logic";
+import { CARRIERS, ORDER_EXPIRY_MINUTES, SLA_HOURS } from "../game/constants";
+import { getServiceOptions, getExpiryProgress, formatDeliveryDate } from "../game/logic";
 
 export default function CarrierSelectionScreen() {
   const { state, dispatch } = useGame();
@@ -45,7 +45,9 @@ export default function CarrierSelectionScreen() {
           <div className="order-details">
             <span className="detail-pill">📍 {order.zone}</span>
             <span className="detail-pill">📦 {order.weight} kg</span>
-            <span className="detail-pill">⏰ {order.deadline}</span>
+            <span className="detail-pill" title={`SLA: ${order.deadline} `}>
+              ⏰ Due {formatDeliveryDate(order.arrivalMinutes + SLA_HOURS[order.deadline] * 60)}
+            </span>
             <span className="detail-pill">{order.priority}</span>
             {order.isDG && <span className="detail-pill" style={{ background: "#dc2626", color: "#fff" }}>☢️ DG</span>}
             {order.isFragile && <span className="detail-pill" style={{ background: "#f59e0b", color: "#000" }}>🔸 Fragile</span>}
@@ -57,7 +59,7 @@ export default function CarrierSelectionScreen() {
           <div
             className="expiry-fill"
             style={{
-              width: `${(1 - expiryPct) * 100}%`,
+              width: `${(1 - expiryPct) * 100}% `,
               background: expiryPct > 0.7 ? "var(--danger)" : expiryPct > 0.4 ? "var(--warning)" : "var(--success)",
             }}
           />
@@ -91,8 +93,8 @@ export default function CarrierSelectionScreen() {
 
                 return (
                   <div
-                    key={`${opt.carrierName}-${opt.serviceName}`}
-                    className={`service-row ${!canAfford ? "disabled" : ""} ${isCheapest ? "best-value" : ""} ${hasWarnings ? "has-warnings" : ""}`}
+                    key={`${opt.carrierName} -${opt.serviceName} `}
+                    className={`service - row ${!canAfford ? "disabled" : ""} ${isCheapest ? "best-value" : ""} ${hasWarnings ? "has-warnings" : ""} `}
                   >
                     <div className="service-info">
                       <span className="service-name">{opt.serviceName}</span>

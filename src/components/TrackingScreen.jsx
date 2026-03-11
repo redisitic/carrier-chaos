@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGame } from "../context/GameContext";
-import { TRACKING_EVENTS, CARRIERS } from "../game/constants";
+import { TRACKING_EVENTS, CARRIERS, SLA_HOURS } from "../game/constants";
+import { formatDeliveryDate } from "../game/logic";
 
 const EVENT_MAP = {};
 TRACKING_EVENTS.forEach((e) => { EVENT_MAP[e.code] = e; });
@@ -109,7 +110,14 @@ export default function TrackingScreen() {
                   <div className="ct-ship-meta">
                     <span>📦 {shipment.weight}kg</span>
                     <span>₹{shipment.deliveryResult?.cost}</span>
-                    <span>SLA: {shipment.deliveryResult?.sla}</span>
+                    {shipment._status === "expired" ? (
+                      <span className="ct-tag ct-date" style={{ color: "var(--danger)" }}>💀 Expired</span>
+                    ) : (
+                      <span className="ct-tag ct-date" title={`SLA: ${shipment.deliveryResult?.sla || shipment.deadline}`}>
+                        ⏳ {shipment._status === "delivered" ? "Arr. " : "Exp. "}
+                        {formatDeliveryDate(shipment.dispatchMinutes + Math.round((shipment.deliveryResult?.durationHours || SLA_HOURS[shipment.deadline]) * 60))}
+                      </span>
+                    )}
                     {shipment.deliveryResult?.points > 0 && (
                       <span className="ct-points">+{shipment.deliveryResult.points}pts</span>
                     )}

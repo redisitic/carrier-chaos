@@ -64,6 +64,15 @@ function createInitialState() {
       onTimeDeliveries: 0,
       costEfficient: 0,
     },
+    // Daily tracking
+    dailyPoints: 0,
+    dailyStats: {
+      delivered: 0,
+      failed: 0,
+      expired: 0,
+      costEfficient: 0,
+    },
+    pastDays: [],
   };
 }
 
@@ -91,7 +100,6 @@ function reducer(state, action) {
         newDay += 1;
       }
 
-      const gameHour = newMinutes / 60;
       let newQueue = [...state.warehouseQueue];
       let newActive = [...state.activeDeliveries];
       let newCompleted = [...state.completedDeliveries];
@@ -102,8 +110,36 @@ function reducer(state, action) {
       let newXp = state.xp;
       let newLog = [...state.log];
       let newStats = { ...state.stats };
+      let newDailyStats = { ...state.dailyStats };
+      let newDailyPoints = state.dailyPoints;
+      let newPastDays = [...state.pastDays];
       let newOrders = [...state.orders];
+      let newScreen = state.screen;
+      let newRunning = state.running;
 
+      if (newMinutes >= 24 * 60 || (newDay > state.day)) {
+        // End of Day Trigger
+        if (state.day === newDay) {
+          newMinutes -= 24 * 60;
+          newDay += 1;
+        }
+
+        // Save today's stats and pause game
+        newPastDays.push({
+          day: state.day,
+          points: newDailyPoints,
+          stats: newDailyStats,
+        });
+
+        newDailyPoints = 0;
+        newDailyStats = { delivered: 0, failed: 0, expired: 0, costEfficient: 0 };
+        newScreen = "daily_summary";
+        newRunning = false;
+
+        newLog = addLog(newLog, `🌙 Day ${state.day} ended! Reviewing daily performance.`, "info");
+      }
+
+      const gameHour = newMinutes / 60;
       // ── Weather ──
       let newWeather = state.weather;
       let newLastWeatherChange = state.lastWeatherChange;
@@ -133,9 +169,14 @@ function reducer(state, action) {
             const finished = { ...d, status: "delivered", trackingTimeline: updatedEvents };
             newCompleted.push(finished);
             newStats.totalDelivered += 1;
+            newDailyStats.delivered += 1;
             if (d.deliveryResult.slaMatch) newStats.onTimeDeliveries += 1;
-            if (d.deliveryResult.costEfficient) newStats.costEfficient += 1;
+            if (d.deliveryResult.costEfficient) {
+              newStats.costEfficient += 1;
+              newDailyStats.costEfficient += 1;
+            }
             newPoints += d.deliveryResult.points;
+            newDailyPoints += d.deliveryResult.points;
             newXp += d.deliveryResult.xpGain;
             synth.play("delivered");
             newLog = addLog(newLog, `✅ Order #${d.id} delivered via ${d.deliveryResult.carrierName} ${d.deliveryResult.serviceName}`, "success");
@@ -146,7 +187,10 @@ function reducer(state, action) {
             failed.trackingTimeline.push({ code: "EXCEPTION", offsetHours: d.deliveryResult.durationHours, triggered: true });
             newFailed.push(failed);
             newStats.totalFailed += 1;
+            newDailyStats.failed += 1;
             newStats.totalAnomalies += 1;
+            newPoints += d.deliveryResult.points; // usually negative
+            newDailyPoints += d.deliveryResult.points;
             synth.play("anomaly");
             newLog = addLog(newLog, `⚠️ Order #${d.id} FAILED — ${d.deliveryResult.carrierName} delivery exception`, "error");
           }
@@ -163,6 +207,7 @@ function reducer(state, action) {
         if (isOrderExpired(order, newMinutes)) {
           newExpired.push({ ...order, status: "expired" });
           newStats.totalExpired += 1;
+          newDailyStats.expired += 1;
           newStats.totalFailed += 1;
           newLog = addLog(newLog, `⏰ Order #${order.id} expired! Not assigned in time.`, "error");
           newOrders = newOrders.map((o) => o.id === order.id ? { ...o, status: "expired" } : o);
@@ -223,14 +268,25 @@ function reducer(state, action) {
         expiredOrders: newExpired,
         money: newMoney,
         points: newPoints,
+        dailyPoints: newDailyPoints,
         xp: newXp,
         log: newLog,
         stats: newStats,
+        dailyStats: newDailyStats,
+        pastDays: newPastDays,
         weather: newWeather,
         lastWeatherChange: newLastWeatherChange,
         phase: newPhase,
-        running: newPhase === "playing",
-        screen: newPhase !== "playing" ? "gameover" : state.screen,
+        running: newPhase === "playing" ? newRunning : false,
+        screen: newPhase !== "playing" ? "gameover" : newScreen,
+      };
+    }
+
+    case "START_NEXT_DAY": {
+      return {
+        ...state,
+        screen: "warehouse",
+        running: true,
       };
     }
 

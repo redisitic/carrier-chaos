@@ -7,6 +7,7 @@ import CarrierSelectionScreen from "./components/CarrierSelectionScreen";
 import TrackingScreen from "./components/TrackingScreen";
 import StatsScreen from "./components/StatsScreen";
 import GameOverScreen from "./components/GameOverScreen";
+import DailySummaryScreen from "./components/DailySummaryScreen";
 const MapboxMap = lazy(() => import("./components/Map3D/MapboxMap"));
 import "./App.css";
 
@@ -38,6 +39,7 @@ function GameRouter() {
         {screen === "carrier" && <CarrierSelectionScreen />}
         {screen === "tracking" && <TrackingScreen />}
         {screen === "stats" && <StatsScreen />}
+        {screen === "daily_summary" && <DailySummaryScreen />}
         {screen === "map" && (
           <Suspense fallback={<div className="screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading Map...</div>}>
             <MapboxMap />
