@@ -87,15 +87,27 @@ function addLog(log, message, type = "info") {
   return [{ message, type, time: Date.now() }, ...log].slice(0, 50);
 }
 
+/** Calculate money earned at end of day based on points scored (₹15 per point, min ₹0) */
+function calcDailyEarnings(dailyPoints) {
+  return Math.max(0, Math.round(dailyPoints * 15));
+}
+
 /** Run EOD logic: save stats, reset clock to 09:00 next day, preserve shipments */
 function triggerEOD(state) {
+  const dailyMoneyEarned = calcDailyEarnings(state.dailyPoints);
   const newPastDays = [
     ...state.pastDays,
-    { day: state.day, points: state.dailyPoints, stats: state.dailyStats },
+    { day: state.day, points: state.dailyPoints, stats: state.dailyStats, moneyEarned: dailyMoneyEarned },
   ];
-  const newLog = addLog(state.log, `🌇 Day ${state.day} complete — 5:00 PM. Review your EOD report!`, "info");
+  let newLog = addLog(state.log, `🌇 Day ${state.day} complete — 5:00 PM. Review your EOD report!`, "info");
+  if (dailyMoneyEarned > 0) {
+    newLog = addLog(newLog, `💰 Day ${state.day} payout: ₹${dailyMoneyEarned.toLocaleString()} credited (${state.dailyPoints} pts × ₹15)`, "success");
+  } else {
+    newLog = addLog(newLog, `📉 No payout today — points must be positive to earn end-of-day revenue.`, "warning");
+  }
   return {
     ...state,
+    money: state.money + dailyMoneyEarned,
     pastDays: newPastDays,
     dailyPoints: 0,
     dailyStats: { delivered: 0, failed: 0, expired: 0, costEfficient: 0 },
@@ -223,12 +235,14 @@ function reducer(state, action) {
 
       // ── Generate new orders ──
       // Orders only arrive when warehouse is open AND before 16:30 (30-min cutoff window before EOD)
+      // Day 1 spawns at half rate to avoid overwhelming a fresh player
       const ORDER_CUTOFF_MINUTES = 16 * 60 + 30; // 16:30
       const warehouseOpen = isWarehouseOpen(gameHour) && newMinutes < ORDER_CUTOFF_MINUTES;
+      const spawnChance = state.day === 1 ? 0.1 : 0.2;
       if (
         warehouseOpen &&
         newQueue.length < WAREHOUSE.capacity &&
-        Math.random() < 0.2
+        Math.random() < spawnChance
       ) {
         const newOrder = generateOrder(newMinutes);
         newOrders = [...newOrders, newOrder];
@@ -318,7 +332,7 @@ function reducer(state, action) {
     }
 
     case "DISPATCH_ORDER": {
-      const { orderId, carrierName, serviceName } = action;
+      const { orderId, carrierName, serviceName, filterBonus = 0 } = action;
       const order = state.warehouseQueue.find((o) => o.id === orderId);
       if (!order) return state;
 
@@ -348,11 +362,19 @@ function reducer(state, action) {
 
       synth.play("dispatch");
 
-      const newLog = addLog(
+      let newLog = addLog(
         state.log,
         `🏷️ Dispatched #${orderId} via ${carrierName} — ${serviceName} (₹${result.cost}, ${result.sla})`,
         "info"
       );
+
+      let bonusPoints = 0;
+      let bonusDailyPoints = 0;
+      if (filterBonus > 0) {
+        bonusPoints = filterBonus;
+        bonusDailyPoints = filterBonus;
+        newLog = addLog(newLog, `📌 Smart Dispatch +${filterBonus} pts (${filterBonus / 2} filter${filterBonus / 2 > 1 ? "s" : ""} × 2)`, "success");
+      }
 
       const newOrders = state.orders.map((o) =>
         o.id === orderId ? { ...o, status: "in_transit", selectedCarrier: carrierName, selectedService: serviceName, deliveryResult: result } : o
@@ -361,6 +383,8 @@ function reducer(state, action) {
       return {
         ...state,
         money: state.money - result.cost,
+        points: state.points + bonusPoints,
+        dailyPoints: state.dailyPoints + bonusDailyPoints,
         warehouseQueue: state.warehouseQueue.filter((o) => o.id !== orderId),
         activeDeliveries: [...state.activeDeliveries, dispatched],
         orders: newOrders,

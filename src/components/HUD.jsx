@@ -3,6 +3,7 @@ import { xpLevel } from "../game/logic";
 import { useAudio } from "../hooks/useAudio";
 import DebugPanel from "./DebugPanel";
 import { useEffect, useRef, useState } from "react";
+import { RUSH_HOURS, RUSH_MULTIPLIER } from "../game/constants";
 
 function formatTime(gameMinutes) {
   const total = Math.floor(gameMinutes);
@@ -70,9 +71,156 @@ function PointsDisplay({ points }) {
   );
 }
 
+// ── Info Ticker / Carousel ────────────────────────────────────────────────
+function HudTicker({ weather, day, dailyPoints, stats, warehouseQueue, activeDeliveries, gameMinutes }) {
+  const gameHour = (gameMinutes / 60) % 24;
+  const isRushHour = RUSH_HOURS.some((rh) => gameHour >= rh.start && gameHour < rh.end);
+  const nextRush = RUSH_HOURS.find((rh) => gameHour < rh.start);
+
+  const slides = [
+    {
+      icon: weather.icon,
+      label: weather.label,
+      sub:
+        weather.type !== "clear"
+          ? `${weather.deliveryMultiplier}× delay${weather.terrainEffect ? ` · ${weather.terrainEffect}` : " · all zones"}`
+          : "All delivery routes clear",
+      color: weather.type === "clear" ? "#22c55e" : "#f59e0b",
+    },
+    {
+      icon: isRushHour ? "🔥" : "🕐",
+      label: isRushHour ? "Rush Hour Active" : "Off-Peak Hours",
+      sub: isRushHour
+        ? `+${Math.round((RUSH_MULTIPLIER - 1) * 100)}% surcharge · avoid expensive dispatches`
+        : nextRush
+        ? `Next rush: ${nextRush.start}:00–${nextRush.end}:00`
+        : "No more rush hours today",
+      color: isRushHour ? "#ef4444" : "#64748b",
+    },
+    {
+      icon: "📈",
+      label: `Day ${day} · ${dailyPoints >= 0 ? "+" : ""}${dailyPoints} pts`,
+      sub: `${stats.totalDelivered} delivered · ${stats.totalFailed} failed · Earn ₹${Math.max(0, dailyPoints * 10).toLocaleString()} at EOD`,
+      color: dailyPoints >= 0 ? "#22c55e" : "#ef4444",
+    },
+    {
+      icon: "📦",
+      label: `${warehouseQueue.length} pending · ${activeDeliveries.length} in transit`,
+      sub: warehouseQueue.length > 12 ? "⚠️ Warehouse near capacity — dispatch orders!" : "Warehouse operations nominal",
+      color: warehouseQueue.length > 12 ? "#f59e0b" : "#38bdf8",
+    },
+  ];
+
+  const [idx, setIdx] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setIdx((i) => (i + 1) % slides.length);
+        setFading(false);
+      }, 280);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const slide = slides[idx];
+
+  return (
+    <div className="hud-ticker">
+      <div
+        className={`hud-ticker-inner ${fading ? "fade-out" : "fade-in"}`}
+        style={{ "--tick-color": slide.color }}
+      >
+        <span className="tick-icon">{slide.icon}</span>
+        <div className="tick-text">
+          <span className="tick-label">{slide.label}</span>
+          <span className="tick-sub">{slide.sub}</span>
+        </div>
+        <div className="tick-dots">
+          {slides.map((_, i) => (
+            <span
+              key={i}
+              className={`tick-dot${i === idx ? " active" : ""}`}
+              onClick={() => setIdx(i)}
+            />
+          ))}
+        </div>
+      </div>
+      <style>{`
+        .hud-ticker {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 0 8px;
+          min-width: 0;
+        }
+        .hud-ticker-inner {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 8px;
+          padding: 5px 14px 5px 10px;
+          width: 100%;
+          max-width: 400px;
+          transition: opacity 0.28s ease;
+        }
+        .hud-ticker-inner.fade-out { opacity: 0; }
+        .hud-ticker-inner.fade-in  { opacity: 1; }
+        .tick-icon { font-size: 1.15rem; flex-shrink: 0; }
+        .tick-text {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          min-width: 0;
+        }
+        .tick-label {
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: var(--tick-color, #f8fafc);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .tick-sub {
+          font-size: 0.67rem;
+          color: #64748b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .tick-dots {
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          flex-shrink: 0;
+        }
+        .tick-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #334155;
+          cursor: pointer;
+          transition: background 0.3s, transform 0.2s;
+        }
+        .tick-dot.active {
+          background: var(--tick-color, var(--accent));
+          transform: scale(1.3);
+        }
+        .tick-dot:hover { background: #64748b; }
+      `}</style>
+    </div>
+  );
+}
+
 export default function HUD() {
   const { state, dispatch } = useGame();
-  const { money, xp, points, stats, warehouseQueue, activeDeliveries, gameMinutes, day, running, phase, weather, speedIndex } = state;
+  const { money, xp, points, dailyPoints, stats, warehouseQueue, activeDeliveries, gameMinutes, day, running, phase, weather, speedIndex } = state;
   const { level, title } = xpLevel(xp);
   const { muted, toggleMute } = useAudio();
 
@@ -88,6 +236,18 @@ export default function HUD() {
           <span className="clock-day">Day {day}</span>
           <span className="clock-time">{formatTime(gameMinutes)}</span>
         </div>
+
+        {phase === "playing" && (
+          <HudTicker
+            weather={weather}
+            day={day}
+            dailyPoints={dailyPoints || 0}
+            stats={stats}
+            warehouseQueue={warehouseQueue}
+            activeDeliveries={activeDeliveries}
+            gameMinutes={gameMinutes}
+          />
+        )}
 
         <div className="hud-nav">
           <button
@@ -122,12 +282,6 @@ export default function HUD() {
         <div className="hud-controls">
           {phase === "playing" && (
             <>
-              {/* Weather indicator */}
-              <div className="weather-indicator" title={weather.label}>
-                <span>{weather.icon}</span>
-                {weather.type !== "clear" && <small>{weather.label}</small>}
-              </div>
-
               {/* Debug Panel toggle + panel */}
               <DebugPanel />
 

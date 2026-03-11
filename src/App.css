@@ -129,7 +129,6 @@ small {
 .hud-nav {
   display: flex;
   gap: 6px;
-  margin-left: auto;
 }
 
 .nav-btn {

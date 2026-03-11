@@ -42,8 +42,19 @@ function DarkSoulsTooltip({ carrier, visible }) {
 
 export default function CarrierSelectionScreen() {
   const { state, dispatch } = useGame();
-  const { selectedOrderId, warehouseQueue, money, gameMinutes } = state;
+  const { selectedOrderId, warehouseQueue, money, points, gameMinutes } = state;
   const [hoveredCarrier, setHoveredCarrier] = useState(null);
+  const [hoveredFlag, setHoveredFlag] = useState(null);
+  const [activeFilters, setActiveFilters] = useState(new Set());
+
+  const toggleFilter = (key) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const gameHour = gameMinutes / 60;
   const order = warehouseQueue.find((o) => o.id === selectedOrderId);
@@ -61,10 +72,6 @@ export default function CarrierSelectionScreen() {
   const trend = getCostTrend(gameHour);
   const expiryPct = getExpiryProgress(order, gameMinutes);
 
-  const handleSelect = (carrierName, serviceName) => {
-    dispatch({ type: "DISPATCH_ORDER", orderId: order.id, carrierName, serviceName });
-  };
-
   const handleBack = () => {
     dispatch({ type: "SET_SCREEN", screen: "warehouse" });
   };
@@ -73,6 +80,60 @@ export default function CarrierSelectionScreen() {
     ...carrier,
     options: serviceOptions.filter((o) => o.carrierName === carrier.name),
   }));
+
+  // Returns true when a service card should be dimmed.
+  // Checks BOTH the hover-preview flag AND any pinned (clicked) filters.
+  function isServiceDimmed(opt, svcData) {
+    const flagsToDim = new Set(activeFilters);
+    if (hoveredFlag) flagsToDim.add(hoveredFlag);
+    if (flagsToDim.size === 0) return false;
+
+    for (const flag of flagsToDim) {
+      switch (flag) {
+        case "dg":      if (!opt.dg) return true; break;
+        case "no-dg":   if (opt.dg) return true; break;
+        case "fragile": if (opt.slaHours > 72) return true; break;
+        case "durable": break;
+        case "zone":    if (svcData && !svcData.zones.includes(order.zone)) return true; break;
+        case "heavy":   if (opt.maxWeight < order.weight) return true; break;
+        case "express": if (opt.slaHours > SLA_HOURS[order.deadline]) return true; break;
+        default: break;
+      }
+    }
+    return false;
+  }
+
+  const FLAG_HINTS = {
+    "dg":      "Dimming services that cannot handle Dangerous Goods — selecting them risks a −50 pt penalty.",
+    "no-dg":   "Dimming DG-certified services — they’re unnecessary here and cost more than standard options.",
+    "fragile": "Dimming slow surface/ground services (>72h SLA) — fragile goods need faster transit.",
+    "durable": null,
+    "zone":    `Dimming services that don’t cover ${order.zone} — zone mismatches add transit delays.`,
+    "heavy":   `Dimming services with max weight below ${order.weight} kg — this shipment exceeds their capacity.`,
+    "express": `Dimming services too slow for the ${order.deadline} deadline — SLA would be missed.`,
+  };
+
+  const FILTER_BONUS_PER = 2;
+  const filterBonus = activeFilters.size * FILTER_BONUS_PER;
+
+  // ── Best option for Carrier Determination ──────────────────────────────
+  // Heuristic: valid + affordable, sorted by (cost ascending) so we pick most
+  // cost-efficient option which maximises the cost-efficiency scoring bonus.
+  const DETERMINATION_COST = 50; // pts deducted for using the auto-pick
+  const affordableValid = serviceOptions.filter((o) => o.valid && money >= o.cost);
+  const bestOption = affordableValid.length > 0
+    ? affordableValid.reduce((best, o) => o.cost < best.cost ? o : best, affordableValid[0])
+    : null;
+
+  const handleSelect = (carrierName, serviceName, extraPointsDelta = 0) => {
+    const totalBonus = filterBonus + extraPointsDelta;
+    dispatch({ type: "DISPATCH_ORDER", orderId: order.id, carrierName, serviceName, filterBonus: totalBonus });
+  };
+
+  const handleDetermination = () => {
+    if (!bestOption || state.points < DETERMINATION_COST) return;
+    handleSelect(bestOption.carrierName, bestOption.serviceName, -DETERMINATION_COST);
+  };
 
   return (
     <div className="screen carrier-screen">
@@ -107,6 +168,95 @@ export default function CarrierSelectionScreen() {
             <span className={`detail-pill priority-${order.priority.toLowerCase()}`}>{order.priority}</span>
           </div>
 
+          {/* ── Shipment flags: DG, Fragile, Zone, Weight class ── */}
+          <div className="order-flags-row">
+            {order.isDG ? (
+              <span
+                className={`order-flag-badge flag-dg${activeFilters.has("dg") || hoveredFlag === "dg" ? " flag-active" : ""}${activeFilters.has("dg") ? " flag-pinned" : ""}`}
+                title="Click to pin filter — dims services that cannot handle Dangerous Goods"
+                onMouseEnter={() => setHoveredFlag("dg")}
+                onMouseLeave={() => setHoveredFlag(null)}
+                onClick={() => toggleFilter("dg")}
+              >
+                {activeFilters.has("dg") ? "📌" : ""}✅ DG Cargo
+              </span>
+            ) : (
+              <span
+                className={`order-flag-badge flag-no-dg${activeFilters.has("no-dg") || hoveredFlag === "no-dg" ? " flag-active" : ""}${activeFilters.has("no-dg") ? " flag-pinned" : ""}`}
+                title="Click to pin filter — dims expensive DG-certified services you don’t need"
+                onMouseEnter={() => setHoveredFlag("no-dg")}
+                onMouseLeave={() => setHoveredFlag(null)}
+                onClick={() => toggleFilter("no-dg")}
+              >
+                {activeFilters.has("no-dg") ? "📌" : ""}❌ No DG
+              </span>
+            )}
+
+            {order.isFragile ? (
+              <span
+                className={`order-flag-badge flag-fragile${activeFilters.has("fragile") || hoveredFlag === "fragile" ? " flag-active" : ""}${activeFilters.has("fragile") ? " flag-pinned" : ""}`}
+                title="Click to pin filter — dims slow services unsafe for fragile goods"
+                onMouseEnter={() => setHoveredFlag("fragile")}
+                onMouseLeave={() => setHoveredFlag(null)}
+                onClick={() => toggleFilter("fragile")}
+              >
+                {activeFilters.has("fragile") ? "📌" : ""}⚠️ Fragile
+              </span>
+            ) : (
+              <span
+                className={`order-flag-badge flag-durable${activeFilters.has("durable") || hoveredFlag === "durable" ? " flag-active" : ""}${activeFilters.has("durable") ? " flag-pinned" : ""}`}
+                title="Durable goods — all services are safe to use"
+                onMouseEnter={() => setHoveredFlag("durable")}
+                onMouseLeave={() => setHoveredFlag(null)}
+                onClick={() => toggleFilter("durable")}
+              >
+                {activeFilters.has("durable") ? "📌" : ""}✅ Durable
+              </span>
+            )}
+
+            <span
+              className={`order-flag-badge flag-zone${activeFilters.has("zone") || hoveredFlag === "zone" ? " flag-active" : ""}${activeFilters.has("zone") ? " flag-pinned" : ""}`}
+              title="Click to pin filter — highlights zone-compatible services"
+              onMouseEnter={() => setHoveredFlag("zone")}
+              onMouseLeave={() => setHoveredFlag(null)}
+              onClick={() => toggleFilter("zone")}
+            >
+              {activeFilters.has("zone") ? "📌" : ""}🌏 {order.zone}
+            </span>
+
+            {order.weight > 20 && (
+              <span
+                className={`order-flag-badge flag-heavy${activeFilters.has("heavy") || hoveredFlag === "heavy" ? " flag-active" : ""}${activeFilters.has("heavy") ? " flag-pinned" : ""}`}
+                title="Click to pin filter — highlights services with sufficient weight capacity"
+                onMouseEnter={() => setHoveredFlag("heavy")}
+                onMouseLeave={() => setHoveredFlag(null)}
+                onClick={() => toggleFilter("heavy")}
+              >
+                {activeFilters.has("heavy") ? "📌" : ""}⚖️ Heavy ({order.weight} kg)
+              </span>
+            )}
+
+            {order.priority === "Express" && (
+              <span
+                className={`order-flag-badge flag-express${activeFilters.has("express") || hoveredFlag === "express" ? " flag-active" : ""}${activeFilters.has("express") ? " flag-pinned" : ""}`}
+                title="Click to pin filter — highlights services fast enough for the express deadline"
+                onMouseEnter={() => setHoveredFlag("express")}
+                onMouseLeave={() => setHoveredFlag(null)}
+                onClick={() => toggleFilter("express")}
+              >
+                {activeFilters.has("express") ? "📌" : ""}⚡ Express Priority
+              </span>
+            )}
+          </div>
+
+          {/* DG warning banner */}
+          {order.isDG && (
+            <div className="dg-warning-banner">
+              <span>☢️</span>
+              <span>This shipment contains <strong>Dangerous Goods</strong>. You must select a carrier service that shows <strong>DG Permitted</strong> — using a Std Cargo Only service will incur a <strong>−50 pt penalty</strong> and risk delivery failure.</span>
+            </div>
+          )}
+
           <div className="order-lore">
             <div className="order-lore-icon">📋</div>
             <div className="order-lore-text">
@@ -127,10 +277,42 @@ export default function CarrierSelectionScreen() {
         </div>
       </div>
 
-      <div className="terrain-tip">
-        <span className="tip-icon">💡</span>
-        Review the shipment manifest above to determine the required service type.
-        {trend === "up" && <span style={{ color: "var(--warning)", marginLeft: 8 }}>⚠️ Rush hour pricing active!</span>}
+      {(hoveredFlag || activeFilters.size > 0) && (
+        <div className="flag-hint-bar">
+          <span className="tip-icon">🔍</span>
+          <span style={{ flex: 1 }}>
+            {hoveredFlag && FLAG_HINTS[hoveredFlag]
+              ? FLAG_HINTS[hoveredFlag]
+              : activeFilters.size > 0
+              ? Array.from(activeFilters).filter(f => FLAG_HINTS[f]).map(f => FLAG_HINTS[f]).join(" · ")
+              : null
+            }
+          </span>
+          {activeFilters.size > 0 && (
+            <span className="filter-bonus-pill">
+              📌 {activeFilters.size} filter{activeFilters.size > 1 ? "s" : ""} active
+              &nbsp;·&nbsp;
+              <span style={{ color: "#22c55e" }}>+{filterBonus} pts bonus on dispatch</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="terrain-tip" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <span>
+          <span className="tip-icon">💡</span>
+          Hover any badge to preview — click to <strong>pin</strong> a filter. Multi-select supported. Each pinned filter earns +2 pts when dispatching.
+          {trend === "up" && <span style={{ color: "var(--warning)", marginLeft: 8 }}>⚠️ Rush hour pricing active!</span>}
+        </span>
+        <button
+          className={`determination-btn${!bestOption || state.points < DETERMINATION_COST ? " determination-disabled" : ""}`}
+          onClick={handleDetermination}
+          disabled={!bestOption || state.points < DETERMINATION_COST}
+          title={!bestOption ? "No valid affordable option available" : state.points < DETERMINATION_COST ? `Need ${DETERMINATION_COST} pts to use` : `Auto-select ${bestOption.carrierName} · ${bestOption.serviceName} (₹${bestOption.cost}) — costs ${DETERMINATION_COST} pts`}
+        >
+          🔥 Carrier Determination
+          <span className="determination-cost">−{DETERMINATION_COST} pts</span>
+        </button>
       </div>
 
       {/* ── Carrier Grid ── */}
@@ -157,11 +339,12 @@ export default function CarrierSelectionScreen() {
               {carrier.options.map((opt) => {
                 const canAfford = money >= opt.cost;
                 const svcData = carrier.services?.find((s) => s.name === opt.serviceName);
+                const dimmed = isServiceDimmed(opt, svcData);
 
                 return (
                   <div
                     key={`${opt.carrierName}-${opt.serviceName}`}
-                    className={`service-card-v ${!canAfford ? "disabled" : ""}`}
+                    className={`service-card-v ${!canAfford ? "disabled" : ""} ${dimmed ? "flag-dimmed" : ""}`}
                   >
                     <div className="svc-header-row">
                       <div className="svc-name-group">
@@ -247,6 +430,130 @@ export default function CarrierSelectionScreen() {
         .priority-express { background: #7c3aed22; color: #a78bfa; border-color: #7c3aed55; }
         .priority-standard { background: #0369a122; color: #38bdf8; border-color: #0369a155; }
         .priority-economy { background: #15803d22; color: #4ade80; border-color: #15803d55; }
+
+        /* ── Shipment flag badges ── */
+        .order-flags-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 0.5rem;
+        }
+        .order-flag-badge {
+          padding: 3px 10px;
+          border-radius: 99px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          border: 1px solid;
+          letter-spacing: 0.02em;
+          cursor: default;
+        }
+        .flag-dg      { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.4); color: #f59e0b; }
+        .flag-no-dg   { background: rgba(34,197,94,0.08);  border-color: rgba(34,197,94,0.3);  color: #22c55e; }
+        .flag-fragile { background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.4);  color: #f87171; }
+        .flag-durable { background: rgba(14,165,233,0.08); border-color: rgba(14,165,233,0.3); color: #38bdf8; }
+        .flag-zone    { background: rgba(99,102,241,0.1);  border-color: rgba(99,102,241,0.35);color: #818cf8; }
+        .flag-heavy   { background: rgba(168,85,247,0.1);  border-color: rgba(168,85,247,0.35);color: #c084fc; }
+        .flag-express { background: rgba(251,191,36,0.1);  border-color: rgba(251,191,36,0.35);color: #fbbf24; }
+
+        /* ── Carrier Determination button ── */
+        .determination-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 14px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(234,179,8,0.12));
+          border: 1px solid rgba(239,68,68,0.45);
+          color: #fca5a5;
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.2s;
+          flex-shrink: 0;
+        }
+        .determination-btn:hover:not(.determination-disabled) {
+          background: linear-gradient(135deg, rgba(239,68,68,0.28), rgba(234,179,8,0.2));
+          border-color: rgba(239,68,68,0.7);
+          color: #fee2e2;
+          box-shadow: 0 0 12px rgba(239,68,68,0.3);
+        }
+        .determination-btn.determination-disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+        }
+        .determination-cost {
+          font-size: 0.7rem;
+          color: #ef4444;
+          font-weight: 800;
+          background: rgba(239,68,68,0.12);
+          padding: 1px 6px;
+          border-radius: 4px;
+        }
+
+        /* active (being hovered OR pinned) flag badge glows */
+        .order-flag-badge { cursor: pointer; transition: filter 0.15s, box-shadow 0.15s, opacity 0.15s; }
+        .order-flag-badge.flag-active {
+          filter: brightness(1.35);
+          box-shadow: 0 0 8px currentColor;
+          outline: 1px solid currentColor;
+        }
+        .order-flag-badge.flag-pinned {
+          filter: brightness(1.5);
+          box-shadow: 0 0 12px currentColor;
+          outline: 2px solid currentColor;
+        }
+
+        /* dimmed service cards */
+        .service-card-v.flag-dimmed {
+          opacity: 0.2;
+          filter: grayscale(0.8);
+          pointer-events: none;
+          transition: opacity 0.2s, filter 0.2s;
+        }
+        .service-card-v:not(.flag-dimmed) {
+          transition: opacity 0.2s, filter 0.2s;
+        }
+
+        /* flag hint bar */
+        .flag-hint-bar {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.4rem 1rem;
+          background: rgba(99,102,241,0.08);
+          border-bottom: 1px solid rgba(99,102,241,0.2);
+          font-size: 0.78rem;
+          color: #a5b4fc;
+          animation: fadein 0.15s ease;
+        }
+        .filter-bonus-pill {
+          flex-shrink: 0;
+          background: rgba(34,197,94,0.08);
+          border: 1px solid rgba(34,197,94,0.25);
+          border-radius: 99px;
+          padding: 2px 10px;
+          font-size: 0.72rem;
+          color: #94a3b8;
+          white-space: nowrap;
+        }
+        @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+        /* ── DG warning banner ── */
+        .dg-warning-banner {
+          display: flex;
+          gap: 0.6rem;
+          align-items: flex-start;
+          margin-top: 0.5rem;
+          padding: 0.5rem 0.8rem;
+          background: rgba(245,158,11,0.08);
+          border: 1px solid rgba(245,158,11,0.35);
+          border-radius: 6px;
+          font-size: 0.76rem;
+          color: #fcd34d;
+          line-height: 1.5;
+        }
+        .dg-warning-banner span:first-child { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
         
         .order-lore {
           display: flex;

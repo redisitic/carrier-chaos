@@ -8,7 +8,7 @@ export default function DailySummaryScreen() {
   const todayEntry = state.pastDays[state.pastDays.length - 1];
   if (!todayEntry) return null;
 
-  const { day, points, stats } = todayEntry;
+  const { day, points, stats, moneyEarned = 0 } = todayEntry;
 
   const handleNextDay = () => {
     dispatch({ type: "START_NEXT_DAY" });
@@ -25,6 +25,16 @@ export default function DailySummaryScreen() {
             <span className="stat-label">Daily Points</span>
             <span className="stat-value" style={{ color: points >= 0 ? "#22c55e" : "#ef4444" }}>
               {points > 0 ? "+" : ""}{points}
+            </span>
+          </div>
+
+          <div className="stat-box" style={{ borderColor: "rgba(245, 158, 11, 0.3)" }}>
+            <span className="stat-label">💰 Day Earnings</span>
+            <span className="stat-value" style={{ color: moneyEarned > 0 ? "#f59e0b" : "#64748b" }}>
+              {moneyEarned > 0 ? `₹${moneyEarned.toLocaleString()}` : "₹0"}
+            </span>
+            <span style={{ fontSize: "0.65rem", color: "#64748b", marginTop: "-0.25rem" }}>
+              {points} pts × ₹15
             </span>
           </div>
 
@@ -119,6 +129,10 @@ export default function DailySummaryScreen() {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 1rem;
+        }
+        .summary-stats > :first-child,
+        .summary-stats > :nth-child(2) {
+          grid-column: span 1;
         }
         .stat-box {
           background: #0f172a;

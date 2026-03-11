@@ -169,18 +169,18 @@ export const PRIORITIES = ["Express", "Standard", "Economy"];
 
 // ── Scoring ─────────────────────────────────────────────────────────────────
 export const SCORE = {
-  slaMatch: 50,             // Service SLA meets or beats deadline
-  slaMiss: -30,             // SLA exceeds deadline
-  costEfficiency: 40,       // Cheapest valid option chosen
-  costPenaltyRate: 0.5,     // Points lost per ₹ over the cheapest
+  slaMatch: 70,             // Service SLA meets or beats deadline
+  slaMiss: -20,             // SLA exceeds deadline (reduced penalty)
+  costEfficiency: 60,       // Cheapest valid option chosen
+  costPenaltyRate: 0.3,     // Points lost per ₹ over cheapest (reduced)
   dgCompliance: 0,          // No bonus, just required
   dgViolation: -50,         // DG sent via non-DG carrier
-  speedBonus: 20,           // Faster SLA than required
-  fragileBonus: 15,         // Premium carrier for fragile
+  speedBonus: 30,           // Faster SLA than required
+  fragileBonus: 25,         // Premium carrier for fragile
   fragilePenalty: -10,      // Economy carrier for fragile
-  successfulDelivery: 50,   // Base delivery completion
-  reliabilityFail: -25,     // Delivery failed due to carrier unreliability
-  expiredOrder: -25,        // Order expired without being dispatched
+  successfulDelivery: 80,   // Base delivery completion (increased)
+  reliabilityFail: -20,     // Delivery failed (reduced penalty)
+  expiredOrder: -15,        // Order expired (reduced penalty)
 };
 
 // ── Player start ────────────────────────────────────────────────────────────
@@ -267,4 +267,4 @@ export const RUSH_HOURS = [
   { start: 9, end: 10 },
   { start: 14, end: 15 },
 ];
-export const RUSH_MULTIPLIER = 1.4;
+export const RUSH_MULTIPLIER = 1.25;
