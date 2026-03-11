@@ -8,12 +8,12 @@
 }
 
 :root {
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface2: #273549;
-  --border: #334155;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface2: #141414;
+  --border: #222222;
+  --text: #ffffff;
+  --text-muted: #888888;
   --accent: #6366f1;
   --success: #22c55e;
   --warning: #f59e0b;
@@ -78,6 +78,8 @@ small {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  z-index: 100;
 }
 
 .hud-top {
@@ -236,6 +238,7 @@ small {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .panel.grow {
@@ -1211,6 +1214,7 @@ small {
   font-weight: 700;
   font-size: 15px;
   transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .btn-primary:hover {

@@ -17,8 +17,8 @@ export default function DailySummaryScreen() {
   return (
     <div className="screen summary-screen">
       <div className="summary-card">
-        <h2 className="summary-title">🌙 End of Day {day}</h2>
-        <p className="summary-sub">Warehouse operations have paused for the night.</p>
+        <h2 className="summary-title">🌇 End of Day {day}</h2>
+        <p className="summary-sub">Business hours closed — 5:00 PM. Review today's performance before tomorrow.</p>
 
         <div className="summary-stats">
           <div className="stat-box" style={{ borderColor: "rgba(34, 197, 94, 0.3)" }}>
@@ -35,15 +35,20 @@ export default function DailySummaryScreen() {
 
           <div className="stat-box" style={{ borderColor: "rgba(239, 68, 68, 0.3)" }}>
             <span className="stat-label">Failed / Issues</span>
-            <span className="stat-value" style={{ color: stats.failed > 0 ? "#ef4444" : "#94a3b8" }}>
-              {stats.failed}
+            <span className="stat-value" style={{ color: (stats.failed + stats.expired) > 0 ? "#ef4444" : "#94a3b8" }}>
+              {stats.failed + stats.expired}
             </span>
+            {(stats.failed > 0 || stats.expired > 0) && (
+              <span style={{ fontSize: "0.65rem", color: "#64748b", marginTop: "-0.25rem" }}>
+                {stats.failed} carrier · {stats.expired} expired
+              </span>
+            )}
           </div>
 
-          <div className="stat-box" style={{ borderColor: "rgba(245, 158, 11, 0.3)" }}>
-            <span className="stat-label">Expired</span>
-            <span className="stat-value" style={{ color: stats.expired > 0 ? "#f59e0b" : "#94a3b8" }}>
-              {stats.expired}
+          <div className="stat-box" style={{ borderColor: "rgba(99, 102, 241, 0.3)" }}>
+            <span className="stat-label">Still In Transit</span>
+            <span className="stat-value" style={{ color: "#818cf8" }}>
+              {state.activeDeliveries.length}
             </span>
           </div>
         </div>
@@ -73,7 +78,7 @@ export default function DailySummaryScreen() {
         </div>
 
         <button className="primary-btn pulse-glow" onClick={handleNextDay}>
-          Start Day {day + 1} ☀️
+          Begin Day {day + 1} ☀️
         </button>
       </div>
 
@@ -83,12 +88,11 @@ export default function DailySummaryScreen() {
           align-items: center;
           justify-content: center;
           padding: 2rem;
-          background: rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(8px);
+          background: #000000;
         }
         .summary-card {
-          background: #1e293b;
-          border: 1px solid #334155;
+          background: #0d0d0d;
+          border: 1px solid #222222;
           border-radius: 12px;
           padding: 2rem;
           width: 100%;

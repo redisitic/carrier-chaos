@@ -46,6 +46,37 @@ export function formatDeliveryDate(minutes) {
 
 let _orderId = 1000;
 
+// ── Product catalogue (80 products, randomly assigned per order) ──────────────
+const PRODUCTS = [
+  "Lego Cat", "Wireless Earbuds", "Standing Desk", "Mechanical Keyboard",
+  "Yoga Mat", "Electric Kettle", "Air Purifier", "Bamboo Cutting Board",
+  "Portable Monitor", "Laptop Stand", "Smart Bulb Pack", "Protein Powder (5kg)",
+  "Running Shoes", "Dumbbell Set", "Coffee Grinder", "Cast Iron Skillet",
+  "Instant Pot", "Resistance Bands", "Kindle Paperwhite", "Ring Light",
+  "Webcam HD 4K", "USB-C Hub", "SSD 1TB", "Gaming Headset",
+  "Noise-Cancelling Headphones", "Smartwatch", "Blender Pro", "Air Fryer XL",
+  "Espresso Machine", "Hand Mixer", "Digital Scale", "Massage Gun",
+  "Phone Tripod", "Action Camera", "Walkie Talkies", "LED Strip Lights",
+  "Thermal Flask", "Trekking Poles", "Camping Lantern", "Sleeping Bag",
+  "Drone Mini", "VR Headset", "Graphics Tablet", "Drawing Glove",
+    "Watercolor Set", "Sculpting Clay (Bulk)", "Acrylic Paint Kit", "Fountain Pen Set",
+  "Leather Wallet", "Sunglasses UV400", "Compression Socks", "Ankle Brace",
+  "First Aid Kit Pro", "Blood Pressure Monitor", "Pulse Oximeter", "Thermometer Gun",
+  "Multivitamin Pack", "Omega-3 Capsules", "Whey Protein Isolate", "Eye Drops",
+  "Baby Monitor", "Car Seat Cover", "Dash Camera", "Tire Inflator",
+  "Jump Starter Kit", "USB Car Charger", "Parking Sensor Kit", "Seat Cushion Gel",
+  "Office Chair Mat", "Monitor Arm", "Desk Organiser", "Cable Management Kit",
+  "Power Strip Surge", "Smart Plug 4-Pack", "Security Camera", "Door Sensor Kit",
+  "Robot Vacuum", "Steam Mop", "Water Filter Pitcher", "Shower Filter",
+];
+
+// ── Destination Cities ────────────────────────────────────────────────────────
+const CITIES_BY_ZONE = {
+  "India Metro": ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata"],
+  "India Tier-2": ["Pune", "Ahmedabad", "Surat", "Jaipur", "Lucknow", "Kanpur", "Nagpur", "Indore", "Thane", "Bhopal", "Visakhapatnam", "Pimpri-Chinchwad", "Patna", "Vadodara", "Ghaziabad", "Ludhiana", "Agra", "Nashik"],
+  "India Rural": ["Lonavala", "Satara", "Jalgaon", "Amravati", "Nanded", "Kolhapur", "Akola", "Latur", "Dhule", "Ahmednagar", "Chandrapur", "Parbhani", "Ichalkaranji", "Jalna", "Bhusawal", "Navi Mumbai", "Panvel", "Kalyan"],
+};
+
 export function generateOrder(gameMinutes) {
   const store = randFrom(STORES);
   const zone = randFrom(store.zones);
@@ -67,12 +98,31 @@ export function generateOrder(gameMinutes) {
     deadline = randFrom(["3-5 day", "5-7 day"]);
   }
 
+  // Generate flavor text based on properties
+  const productName = randFrom(PRODUCTS);
+  let desc = `Standard shipment of ${productName}.`;
+  
+  if (isDG && isFragile) {
+    desc = `Hazardous & fragile cargo: ${productName}. Contains sensitive volatile materials (Class 9 Lithium/Chemicals). Requires gentle handling and DG-certified carrier.`;
+  } else if (isDG) {
+    desc = `Dangerous Goods (DG): ${productName}. Contains restricted materials (batteries, flammables, or chemical compounds). Must ship via DG-certified network.`;
+  } else if (isFragile) {
+    desc = `Fragile handling required: ${productName}. Sensitive components, requires premium suspension transport. Avoid standard surface freight.`;
+  } else if (weight > 30) {
+    desc = `Heavy bulk shipment: ${productName}. Weighs ${weight}kg. Will require freight-capable carrier.`;
+  } else if (priority === "Express") {
+    desc = `Urgent time-critical delivery: ${productName}. Customer has paid premium for expedited routing.`;
+  }
+
   return {
     id: ++_orderId,
     store: store.name,
     storeIcon: store.icon,
     category: store.category,
+    productName,
+    desc,
     zone,
+    city: randFrom(CITIES_BY_ZONE[zone] || ["Unknown City"]),
     distance,
     weight,
     value,

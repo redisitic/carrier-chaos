@@ -52,7 +52,7 @@ export default function WarehouseScreen() {
 
           {warehouseQueue.length === 0 ? (
             <div className="empty-state">
-              {warehouseOpen ? "Waiting for orders..." : "Dashboard closed. Orders arrive at 08:00."}
+              {warehouseOpen ? "Waiting for orders..." : `Dashboard closed. Orders arrive at ${String(WAREHOUSE.openHour).padStart(2,"0")}:00.`}
             </div>
           ) : (
             <div className="order-list">
@@ -63,10 +63,11 @@ export default function WarehouseScreen() {
                     <div className="order-card-top">
                       <span className="order-id">{order.storeIcon} #{order.id}</span>
                       <span className={`badge ${PRIORITY_BADGE[order.priority]}`}>{order.priority}</span>
-                      <span className="terrain-tag">📍 {order.zone}</span>
+                      <span className="terrain-tag" title={order.zone}>📍 {order.city || order.zone}</span>
                       <span className="distance">{order.weight}kg · {order.distance}km</span>
-                      {order.isDG && <span className="dg-tag">☢️ DG</span>}
-                      {order.isFragile && <span className="fragile-tag">🔸</span>}
+                    </div>
+                    <div className="order-lore-warehouse" title={order.desc}>
+                      {order.desc || `Standard shipment of ${order.productName || "Package"}.`}
                     </div>
                     <div className="order-card-mid">
                       <span className="deadline-tag" title={`SLA: ${order.deadline}`}>
@@ -118,7 +119,7 @@ export default function WarehouseScreen() {
                   <div key={d.id} className="active-row">
                     <span className="order-id">{d.storeIcon} #{d.id}</span>
                     <span>{d.deliveryResult?.carrierName} — {d.deliveryResult?.serviceName}</span>
-                    <span className="terrain-tag small">📍 {d.zone}</span>
+                    <span className="terrain-tag small" title={d.zone}>📍 {d.city || d.zone}</span>
                     <div className="progress-bar-mini">
                       <div className="progress-fill-mini" style={{ width: `${progress * 100}%` }} />
                     </div>

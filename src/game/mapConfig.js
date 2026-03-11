@@ -85,6 +85,7 @@ export const CARRIER_3D = {
   Delhivery: { bodyColor: "#E31E25", scale: 0.45, type: "van" },
   Bluedart: { bodyColor: "#003DA5", scale: 0.5, type: "truck" },
   "Swiss Post": { bodyColor: "#DC0018", scale: 0.45, type: "van" },
+  Maersk: { bodyColor: "#0082ba", scale: 0.6, type: "ship" },
 };
 
 export const BIOMES = ZONE_REGIONS;

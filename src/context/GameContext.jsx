@@ -9,6 +9,7 @@ import {
   WEATHER_TYPES,
   WEATHER_CHANGE_INTERVAL,
   TRACKING_EVENTS,
+  SCORE,
 } from "../game/constants";
 import {
   generateOrder,
@@ -21,12 +22,16 @@ import {
 import { getNextWeather } from "../game/weather";
 import { synth } from "../hooks/useAudio";
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+const DAY_START_MINUTES = 9 * 60;   // 09:00
+const DAY_END_MINUTES   = 17 * 60;  // 17:00
+
 // ── Initial state ─────────────────────────────────────────────────────────────
 
 function createInitialState() {
   return {
-    // Clock
-    gameMinutes: 7 * 60 + 50,  // Start at 07:50, warehouse opens at 08:00
+    // Clock — starts at 09:00
+    gameMinutes: DAY_START_MINUTES,
     day: 1,
     running: false,
     screen: "warehouse",
@@ -82,6 +87,27 @@ function addLog(log, message, type = "info") {
   return [{ message, type, time: Date.now() }, ...log].slice(0, 50);
 }
 
+/** Run EOD logic: save stats, reset clock to 09:00 next day, preserve shipments */
+function triggerEOD(state) {
+  const newPastDays = [
+    ...state.pastDays,
+    { day: state.day, points: state.dailyPoints, stats: state.dailyStats },
+  ];
+  const newLog = addLog(state.log, `🌇 Day ${state.day} complete — 5:00 PM. Review your EOD report!`, "info");
+  return {
+    ...state,
+    pastDays: newPastDays,
+    dailyPoints: 0,
+    dailyStats: { delivered: 0, failed: 0, expired: 0, costEfficient: 0 },
+    screen: "daily_summary",
+    running: false,
+    // Clock: advance to next day at 09:00 — preserved on START_NEXT_DAY
+    gameMinutes: DAY_START_MINUTES,
+    day: state.day + 1,
+    log: newLog,
+  };
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case "START_GAME": {
@@ -94,10 +120,13 @@ function reducer(state, action) {
       if (!state.running || state.phase !== "playing") return state;
 
       let newMinutes = state.gameMinutes + MINUTES_PER_TICK;
-      let newDay = state.day;
-      if (newMinutes >= 24 * 60) {
-        newMinutes -= 24 * 60;
-        newDay += 1;
+
+      // ── EOD check — 17:00 boundary ──
+      if (newMinutes >= DAY_END_MINUTES) {
+        // Run normal delivery / queue processing with the CURRENT minutes first
+        // so nothing is lost right at end-of-day
+        newMinutes = DAY_END_MINUTES; // cap at 17:00 for clean display
+        return triggerEOD({ ...state, gameMinutes: newMinutes });
       }
 
       let newQueue = [...state.warehouseQueue];
@@ -112,34 +141,12 @@ function reducer(state, action) {
       let newStats = { ...state.stats };
       let newDailyStats = { ...state.dailyStats };
       let newDailyPoints = state.dailyPoints;
-      let newPastDays = [...state.pastDays];
       let newOrders = [...state.orders];
       let newScreen = state.screen;
       let newRunning = state.running;
 
-      if (newMinutes >= 24 * 60 || (newDay > state.day)) {
-        // End of Day Trigger
-        if (state.day === newDay) {
-          newMinutes -= 24 * 60;
-          newDay += 1;
-        }
-
-        // Save today's stats and pause game
-        newPastDays.push({
-          day: state.day,
-          points: newDailyPoints,
-          stats: newDailyStats,
-        });
-
-        newDailyPoints = 0;
-        newDailyStats = { delivered: 0, failed: 0, expired: 0, costEfficient: 0 };
-        newScreen = "daily_summary";
-        newRunning = false;
-
-        newLog = addLog(newLog, `🌙 Day ${state.day} ended! Reviewing daily performance.`, "info");
-      }
-
       const gameHour = newMinutes / 60;
+
       // ── Weather ──
       let newWeather = state.weather;
       let newLastWeatherChange = state.lastWeatherChange;
@@ -157,14 +164,12 @@ function reducer(state, action) {
       for (const d of newActive) {
         const elapsedHours = (newMinutes - d.dispatchMinutes) / 60;
 
-        // Update tracking events
         const updatedEvents = d.trackingTimeline.map((evt) => ({
           ...evt,
           triggered: elapsedHours >= evt.offsetHours,
         }));
 
         if (elapsedHours >= d.deliveryResult.durationHours) {
-          // Delivery complete
           if (d.deliveryResult.deliverySuccess) {
             const finished = { ...d, status: "delivered", trackingTimeline: updatedEvents };
             newCompleted.push(finished);
@@ -181,15 +186,13 @@ function reducer(state, action) {
             synth.play("delivered");
             newLog = addLog(newLog, `✅ Order #${d.id} delivered via ${d.deliveryResult.carrierName} ${d.deliveryResult.serviceName}`, "success");
           } else {
-            // Reliability failure
             const failed = { ...d, status: "failed", trackingTimeline: updatedEvents };
-            // Add exception event
             failed.trackingTimeline.push({ code: "EXCEPTION", offsetHours: d.deliveryResult.durationHours, triggered: true });
             newFailed.push(failed);
             newStats.totalFailed += 1;
             newDailyStats.failed += 1;
             newStats.totalAnomalies += 1;
-            newPoints += d.deliveryResult.points; // usually negative
+            newPoints += d.deliveryResult.points;
             newDailyPoints += d.deliveryResult.points;
             synth.play("anomaly");
             newLog = addLog(newLog, `⚠️ Order #${d.id} FAILED — ${d.deliveryResult.carrierName} delivery exception`, "error");
@@ -208,8 +211,9 @@ function reducer(state, action) {
           newExpired.push({ ...order, status: "expired" });
           newStats.totalExpired += 1;
           newDailyStats.expired += 1;
-          newStats.totalFailed += 1;
-          newLog = addLog(newLog, `⏰ Order #${order.id} expired! Not assigned in time.`, "error");
+          newPoints += SCORE.expiredOrder;        // point penalty
+          newDailyPoints += SCORE.expiredOrder;
+          newLog = addLog(newLog, `⏰ Order #${order.id} expired! −${Math.abs(SCORE.expiredOrder)} pts penalty.`, "error");
           newOrders = newOrders.map((o) => o.id === order.id ? { ...o, status: "expired" } : o);
         } else {
           freshQueue.push(order);
@@ -218,11 +222,11 @@ function reducer(state, action) {
       newQueue = freshQueue;
 
       // ── Generate new orders ──
-      const warehouseOpen = isWarehouseOpen(gameHour);
-      const remainingToGenerate = state.totalShipments - newOrders.length;
+      // Orders only arrive when warehouse is open AND before 16:30 (30-min cutoff window before EOD)
+      const ORDER_CUTOFF_MINUTES = 16 * 60 + 30; // 16:30
+      const warehouseOpen = isWarehouseOpen(gameHour) && newMinutes < ORDER_CUTOFF_MINUTES;
       if (
         warehouseOpen &&
-        remainingToGenerate > 0 &&
         newQueue.length < WAREHOUSE.capacity &&
         Math.random() < 0.2
       ) {
@@ -232,24 +236,18 @@ function reducer(state, action) {
         newLog = addLog(newLog, `📥 New order #${newOrder.id} from ${newOrder.storeIcon} ${newOrder.store} → ${newOrder.zone}`, "info");
       }
 
-      // ── Check lose conditions ──
+      // ── Check lose conditions (only out-of-funds) ──
       let newPhase = state.phase;
-      const totalFails = newFailed.length + newExpired.length;
       if (newMoney < LOSE_CONDITIONS.minFunds) {
         newPhase = "lost";
         newLog = addLog(newLog, "💸 Out of funds! Game over.", "error");
-        synth.play("gameover");
-      }
-      if (totalFails > LOSE_CONDITIONS.maxFailedShipments) {
-        newPhase = "lost";
-        newLog = addLog(newLog, "❌ Too many failed/expired shipments! Game over.", "error");
         synth.play("gameover");
       }
 
       // ── Check win condition ──
       const allOrdersGenerated = newOrders.length >= state.totalShipments;
       const allProcessed = allOrdersGenerated && newActive.length === 0 && newQueue.length === 0;
-      const enoughDelivered = newCompleted.length >= state.totalShipments * 0.6; // 60% must be delivered to win
+      const enoughDelivered = newCompleted.length >= state.totalShipments * 0.6;
       if (allProcessed && enoughDelivered && newPhase === "playing") {
         newPhase = "won";
         newLog = addLog(newLog, "🎉 All shipments processed! Great job, logistics pro!", "success");
@@ -259,7 +257,6 @@ function reducer(state, action) {
       return {
         ...state,
         gameMinutes: newMinutes,
-        day: newDay,
         orders: newOrders,
         warehouseQueue: newQueue,
         activeDeliveries: newActive,
@@ -273,7 +270,7 @@ function reducer(state, action) {
         log: newLog,
         stats: newStats,
         dailyStats: newDailyStats,
-        pastDays: newPastDays,
+        pastDays: state.pastDays,
         weather: newWeather,
         lastWeatherChange: newLastWeatherChange,
         phase: newPhase,
@@ -283,6 +280,7 @@ function reducer(state, action) {
     }
 
     case "START_NEXT_DAY": {
+      // gameMinutes + day already advanced by triggerEOD; just resume
       return {
         ...state,
         screen: "warehouse",
@@ -290,6 +288,31 @@ function reducer(state, action) {
       };
     }
 
+    // ── Debug panel actions ────────────────────────────────────────────────
+    case "ADJUST_TIME": {
+      const delta = action.deltaMinutes || 0;
+      const clamped = Math.min(DAY_END_MINUTES - 1, Math.max(DAY_START_MINUTES, state.gameMinutes + delta));
+      return { ...state, gameMinutes: clamped };
+    }
+
+    case "END_DAY_NOW": {
+      if (state.phase !== "playing") return state;
+      return triggerEOD({ ...state, gameMinutes: DAY_END_MINUTES });
+    }
+
+    case "RESTART_DAY": {
+      // Reset clock and daily counters; preserve all shipments / cumulative stats
+      return {
+        ...state,
+        gameMinutes: DAY_START_MINUTES,
+        dailyPoints: 0,
+        dailyStats: { delivered: 0, failed: 0, expired: 0, costEfficient: 0 },
+        running: true,
+        log: addLog(state.log, `🔄 Day ${state.day} restarted — clock reset to 09:00.`, "info"),
+      };
+    }
+
+    // ── Standard actions ───────────────────────────────────────────────────
     case "SELECT_ORDER": {
       return { ...state, selectedOrderId: action.orderId, screen: "carrier" };
     }
@@ -307,7 +330,6 @@ function reducer(state, action) {
         };
       }
 
-      // Generate tracking timeline
       const timeline = generateTrackingTimeline(result.sla, order.zone, result.durationHours);
       const trackingTimeline = timeline.map((evt) => ({
         ...evt,

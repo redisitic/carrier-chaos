@@ -1,12 +1,73 @@
 import { useGame } from "../context/GameContext";
 import { xpLevel } from "../game/logic";
-import { SPEED_OPTIONS } from "../game/constants";
 import { useAudio } from "../hooks/useAudio";
+import DebugPanel from "./DebugPanel";
+import { useEffect, useRef, useState } from "react";
 
 function formatTime(gameMinutes) {
-  const h = Math.floor(gameMinutes / 60) % 24;
-  const m = gameMinutes % 60;
+  const total = Math.floor(gameMinutes);
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+// TF2-style floating score delta numbers
+let _floatId = 0;
+function PointsDisplay({ points }) {
+  const prevRef = useRef(points);
+  const [floats, setFloats] = useState([]);
+
+  useEffect(() => {
+    const delta = points - prevRef.current;
+    if (delta !== 0) {
+      const id = ++_floatId;
+      setFloats((f) => [...f, { id, delta }]);
+      // remove after animation (~1.4s)
+      setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 1400);
+    }
+    prevRef.current = points;
+  }, [points]);
+
+  return (
+    <div className="points-display-wrap">
+      {floats.map(({ id, delta }) => (
+        <span
+          key={id}
+          className={`score-float ${delta > 0 ? "score-pos" : "score-neg"}`}
+        >
+          {delta > 0 ? `+${delta}` : delta}
+        </span>
+      ))}
+      <span className="stat-value points">{points}</span>
+      <style>{`
+        .points-display-wrap {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .score-float {
+          position: absolute;
+          bottom: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          font-size: 0.85rem;
+          font-weight: 800;
+          line-height: 1;
+          white-space: nowrap;
+          pointer-events: none;
+          animation: score-rise 1.4s ease-out forwards;
+        }
+        .score-pos { color: #22c55e; text-shadow: 0 0 8px #22c55e99; }
+        .score-neg { color: #ef4444; text-shadow: 0 0 8px #ef444499; }
+        @keyframes score-rise {
+          0%   { opacity: 1; transform: translateX(-50%) translateY(0px) scale(1.2); }
+          20%  { opacity: 1; transform: translateX(-50%) translateY(-6px) scale(1); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(-28px) scale(0.85); }
+        }
+      `}</style>
+    </div>
+  );
 }
 
 export default function HUD() {
@@ -67,18 +128,8 @@ export default function HUD() {
                 {weather.type !== "clear" && <small>{weather.label}</small>}
               </div>
 
-              {/* Speed controls */}
-              <div className="speed-controls">
-                {SPEED_OPTIONS.map((opt, i) => (
-                  <button
-                    key={opt.label}
-                    className={`speed-btn ${speedIndex === i ? "active" : ""}`}
-                    onClick={() => dispatch({ type: "SET_SPEED", speedIndex: i })}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              {/* Debug Panel toggle + panel */}
+              <DebugPanel />
 
               <button
                 className={`pause-btn ${running ? "" : "paused"}`}
@@ -104,7 +155,7 @@ export default function HUD() {
         </div>
         <div className="hud-stat">
           <span className="stat-label">Points</span>
-          <span className="stat-value points">{points}</span>
+          <PointsDisplay points={points} />
         </div>
         <div className="hud-divider" />
         <div className="hud-stat">
@@ -123,12 +174,6 @@ export default function HUD() {
           <span className="stat-label">Expired</span>
           <span className={`stat-value ${stats.totalExpired > 0 ? "warning" : ""}`}>
             {stats.totalExpired}
-          </span>
-        </div>
-        <div className="hud-stat">
-          <span className="stat-label">Failed</span>
-          <span className={`stat-value ${stats.totalFailed > 0 ? "danger" : ""}`}>
-            {stats.totalFailed} / 5
           </span>
         </div>
       </div>

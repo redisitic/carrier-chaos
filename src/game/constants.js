@@ -73,21 +73,27 @@ export const CARRIERS = [
     icon: "📦",
     color: "#4D148C",
     reliability: 0.96,
+    lore: "FedEx — The Purple Machine. Born from the dreams of a Yale student who scraped a 'C' on the business plan that would change the world. Their overnight network stretches across every major Indian metro, humming 24 hours a day.",
+    pros: ["Highest metro coverage", "DG certified on all tiers", "Industry-leading tracking"],
+    cons: ["Premium pricing", "Metro-only for same-day"],
     services: [
-      { name: "Priority Express", sla: "same-day", costPerKg: 220, zones: ["India Metro"], dg: true, maxWeight: 20 },
-      { name: "Standard Express", sla: "next-day", costPerKg: 150, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 30 },
-      { name: "Economy", sla: "3-5 day", costPerKg: 75, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50 },
+      { name: "Priority Express", sla: "same-day", costPerKg: 220, zones: ["India Metro"], dg: true, maxWeight: 20, desc: "Guaranteed same-day delivery within metro limits. A fleet of dedicated vehicles with real-time GPS. For when it absolutely, positively has to be there today." },
+      { name: "Standard Express", sla: "next-day", costPerKg: 150, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 30, desc: "FedEx's backbone service. Overnight network spanning all India zones. Full DG clearance. Reliable enough that most enterprise SLAs are built around it." },
+      { name: "Economy", sla: "3-5 day", costPerKg: 75, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Consolidated freight routed through regional hubs. Not glamorous, but cost-effective for non-urgent, non-DG cargo. Shares trucks with Standard Express overflow." },
     ],
   },
   {
     name: "UPS",
     icon: "🟤",
-    color: "#351C15",
+    color: "#8B5E3C",
     reliability: 0.95,
+    lore: "UPS — Brown. Boring. Brilliant. United Parcel Service has been delivering since 1907. They invented the science of delivery route optimisation — their drivers turn left as rarely as possible to save fuel. In India, they dominate corporate B2B freight.",
+    pros: ["Excellent B2B network", "High weight tolerance", "Ground freight specialty"],
+    cons: ["No Rural same-day", "Lower DG tier vs FedEx"],
     services: [
-      { name: "Express Saver", sla: "next-day", costPerKg: 180, zones: ["India Metro", "India Tier-2"], dg: true, maxWeight: 25 },
-      { name: "Standard", sla: "3-5 day", costPerKg: 85, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 40 },
-      { name: "Ground Freight", sla: "5-7 day", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 100 },
+      { name: "Express Saver", sla: "next-day", costPerKg: 180, zones: ["India Metro", "India Tier-2"], dg: true, maxWeight: 25, desc: "Next-day guaranteed, metro and Tier-2. UPS's premium domestic offering. DG certified. Marginally cheaper than FedEx for the same SLA, with slightly lower reliability." },
+      { name: "Standard", sla: "3-5 day", costPerKg: 85, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 40, desc: "UPS's standard ground network. Pan-India reach but no DG clearance. Solid mid-tier option for non-hazardous goods with moderate urgency." },
+      { name: "Ground Freight", sla: "5-7 day", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 100, desc: "Heavy freight via road. The cheapest option that reaches Rural zones with 100kg capacity. Ideal for furniture and bulk orders. No DG." },
     ],
   },
   {
@@ -95,10 +101,13 @@ export const CARRIERS = [
     icon: "✈️",
     color: "#FFCC00",
     reliability: 0.97,
+    lore: "DHL — Delivering Happiness Logistically. Founded in 1969 to courier documents between Honolulu and San Francisco. Now they move 1.8 billion parcels a year. In India, DHL's aviation connections make them the top pick for air-sensitive cargo.",
+    pros: ["Highest reliability in market (97%)", "Best DG handling", "Widest air network"],
+    cons: ["Most expensive same-day", "eCommerce tier lacks DG"],
     services: [
-      { name: "Express", sla: "same-day", costPerKg: 250, zones: ["India Metro"], dg: true, maxWeight: 15 },
-      { name: "Domestic Economy", sla: "3-5 day", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 50 },
-      { name: "eCommerce", sla: "5-7 day", costPerKg: 45, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30 },
+      { name: "Express", sla: "same-day", costPerKg: 250, zones: ["India Metro"], dg: true, maxWeight: 15, desc: "DHL's flagship same-day air service. Dedicated aircraft slots, individual parcel tracking, and DG Class 1-9 certified. The gold standard — at the gold standard price." },
+      { name: "Domestic Economy", sla: "3-5 day", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 50, desc: "Economy air consolidated freight — rare to find DG clearance at this price tier. Routed through DHL's domestic sorting hubs. Significant savings over Express." },
+      { name: "eCommerce", sla: "5-7 day", costPerKg: 45, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30, desc: "Built for high-volume e-commerce parcels. Last-mile via local partners. No DG. Cheapest DHL option by far, best for light non-hazardous goods." },
     ],
   },
   {
@@ -106,10 +115,13 @@ export const CARRIERS = [
     icon: "🚛",
     color: "#E31E25",
     reliability: 0.91,
+    lore: "Delhivery — India's own logistics giant. Founded in 2011 in a Gurgaon garage by five ex-consultants. Now they run 24 automated sorting centers and 2,800 delivery points. They built their own route-optimisation AI. Affordable, scrappy, remarkably wide-reaching.",
+    pros: ["Cheapest rates in market", "Pan-India including Rural", "Best for high-volume eCommerce"],
+    cons: ["No DG certification", "Lower reliability (91%)", "No same-day service"],
     services: [
-      { name: "Express", sla: "next-day", costPerKg: 80, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 20 },
-      { name: "Standard", sla: "3-5 day", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30 },
-      { name: "Surface", sla: "5-7 day", costPerKg: 25, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50 },
+      { name: "Express", sla: "next-day", costPerKg: 80, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 20, desc: "Delhivery's fastest tier. Next-day across all zones — rural included, which is rare at this price. No DG. Best budget next-day option for light consumer goods." },
+      { name: "Standard", sla: "3-5 day", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30, desc: "The crowd favourite for e-commerce. Extremely affordable, wide reach, solid tracking. Reliability takes a hit at 91% — expect occasional exceptions on bulk runs." },
+      { name: "Surface", sla: "5-7 day", costPerKg: 25, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Ground surface freight at the lowest price point available. Suitable for bulky, non-urgent, non-hazardous cargo. Heavily consolidated — expect stops at multiple depots." },
     ],
   },
   {
@@ -117,21 +129,26 @@ export const CARRIERS = [
     icon: "🔵",
     color: "#003DA5",
     reliability: 0.93,
+    lore: "Bluedart — India's original premium courier. Established 1983, acquired by DHL in 2004 but operates independently. They pioneered overnight delivery in India before most cities had proper roads. Their Dart brand is synonymous with speed among Indian CFOs.",
+    pros: ["Strong same-day metro brand", "DG certified on Apex tiers", "Trusted by Indian enterprises"],
+    cons: ["Low weight caps on premium tiers", "More expensive than Delhivery"],
     services: [
-      { name: "Dart Apex Plus", sla: "same-day", costPerKg: 150, zones: ["India Metro"], dg: true, maxWeight: 10 },
-      { name: "Dart Apex", sla: "next-day", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 20 },
-      { name: "Dart Surface", sla: "3-5 day", costPerKg: 35, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50 },
+      { name: "Dart Apex Plus", sla: "same-day", costPerKg: 150, zones: ["India Metro"], dg: true, maxWeight: 10, desc: "Bluedart's top-tier same-day service. More affordable than DHL Express but with a strict 10kg weight cap. DG certified. For lightweight urgent items in metro zones." },
+      { name: "Dart Apex", sla: "next-day", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 20, desc: "Classic overnight Bluedart. Pan-India coverage, DG handling, and a 20kg limit. The SME favourite for pharmaceutical and electronics shipments." },
+      { name: "Dart Surface", sla: "3-5 day", costPerKg: 35, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Ground option leveraging DHL ground infrastructure post-2004 acquisition. No DG but excellent tracking and depot coverage across India." },
     ],
   },
   {
-    name: "Swiss Post",
-    icon: "🇨🇭",
-    color: "#DC0018",
+    name: "Maersk",
+    icon: "🚢",
+    color: "#0082ba",
     reliability: 0.94,
+    lore: "Maersk — The Container King. A.P. Møller-Maersk has been sailing since 1904 and operates the world's largest container fleet. Their inland logistics arm in India handles coastal freight from Nhava Sheva to Krishnapatnam. Slow but unstoppable — like a fully-loaded bulk carrier.",
+    pros: ["Handles heaviest cargo (up to 1000kg)", "Full DG certification", "Lowest ₹/kg on bulk loads"],
+    cons: ["Slowest SLA (3-7 day minimum)", "Not suitable for urgent shipments"],
     services: [
-      { name: "Premium Express", sla: "next-day", costPerKg: 160, zones: ["India Metro"], dg: false, maxWeight: 15 },
-      { name: "Standard", sla: "3-5 day", costPerKg: 65, zones: ["India Metro", "India Tier-2"], dg: false, maxWeight: 25 },
-      { name: "Economy Surface", sla: "5-7 day", costPerKg: 30, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 40 },
+      { name: "Sea Express", sla: "3-5 day", costPerKg: 45, zones: ["India Metro", "India Tier-2"], dg: true, maxWeight: 200, desc: "Maersk's coastal fast lane. Containers prioritised at port for 3-5 day delivery. DG certified across all hazmat classes. Best value for heavy DG freight that isn't time-critical." },
+      { name: "Ocean Freight", sla: "5-7 day", costPerKg: 20, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 1000, desc: "Full container load via coastal shipping lanes. ₹20/kg is practically free at scale. DG certified, Rural-capable via inland depots. The move for anything measured in tonnes." },
     ],
   },
 ];
@@ -162,7 +179,8 @@ export const SCORE = {
   fragileBonus: 15,         // Premium carrier for fragile
   fragilePenalty: -10,      // Economy carrier for fragile
   successfulDelivery: 50,   // Base delivery completion
-  reliabilityFail: -40,     // Delivery failed due to carrier unreliability
+  reliabilityFail: -25,     // Delivery failed due to carrier unreliability
+  expiredOrder: -25,        // Order expired without being dispatched
 };
 
 // ── Player start ────────────────────────────────────────────────────────────
@@ -174,25 +192,31 @@ export const INITIAL_PLAYER = {
 };
 
 // ── Win / Lose ──────────────────────────────────────────────────────────────
-export const LOSE_CONDITIONS = { minFunds: 0, maxFailedShipments: 5 };
+// NOTE: Failed/expired shipments no longer end the game — they deduct points instead.
+export const LOSE_CONDITIONS = { minFunds: 0 };
 
 // ── Time pressure ───────────────────────────────────────────────────────────
 export const ORDER_EXPIRY_MINUTES = 180;  // 3 in-game hours to assign
 
 // ── Game clock ──────────────────────────────────────────────────────────────
-export const TICK_INTERVAL_MS = 2000;
-export const MINUTES_PER_TICK = 2;
+// Day = 09:00–17:00 (480 in-game minutes).
+// At 1×: 625 ms/tick, 1 min/tick → 480 ticks × 0.625 s = 300 s = 5 real minutes.
+// Every single minute is displayed; no decimal jumping.
+export const TICK_INTERVAL_MS = 625;
+export const MINUTES_PER_TICK = 1;
 
 export const SPEED_OPTIONS = [
-  { label: "1×", multiplier: 1, interval: 2000, minutes: 2 },
-  { label: "2×", multiplier: 2, interval: 1000, minutes: 2 },
-  { label: "3×", multiplier: 3, interval: 600, minutes: 2 },
+  { label: "1×", multiplier: 1, interval: 625 },
+  { label: "2×", multiplier: 2, interval: 312 },
+  { label: "3×", multiplier: 3, interval: 208 },
+  { label: "4×", multiplier: 4, interval: 156 },
+  { label: "5×", multiplier: 5, interval: 125 },
 ];
 
 // ── Warehouse / Dashboard hours ─────────────────────────────────────────────
 export const WAREHOUSE = {
-  openHour: 8,
-  closeHour: 18,
+  openHour: 9,
+  closeHour: 17,
   capacity: 20,
 };
 

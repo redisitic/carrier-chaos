@@ -5,6 +5,31 @@ import * as THREE from "three";
 import CarrierModel from "./CarrierModel";
 import { CARRIER_3D, WAREHOUSE_POS, getDeliveryPosition } from "../../game/mapConfig";
 
+// Helper for computing curved paths
+function getCurvePoints(startPos, endPos, type) {
+    const start = new THREE.Vector3(...startPos).add(new THREE.Vector3(0, 0.1, 0));
+    const end = new THREE.Vector3(...endPos).add(new THREE.Vector3(0, 0.1, 0));
+    
+    const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+    
+    if (type === "helicopter") {
+        mid.y += 2.5; // High arc
+    } else if (type === "ship") {
+        // More curvy horizontal path to simulate rivers
+        const dir = new THREE.Vector3().subVectors(end, start).normalize();
+        const side = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(3.0);
+        mid.add(side);
+    } else {
+        // Slight horizontal offset for trucks/vans to simulate roads
+        const dir = new THREE.Vector3().subVectors(end, start).normalize();
+        const side = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(1.2);
+        mid.add(side);
+    }
+
+    const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+    return curve.getPoints(50);
+}
+
 // ── Single animated carrier on a delivery route ──────────────────────────────
 export function ActiveDelivery({ delivery }) {
     const groupRef = useRef();
@@ -17,29 +42,36 @@ export function ActiveDelivery({ delivery }) {
         [delivery.id, delivery.zone]
     );
 
+    // Compute curved path for animation
+    const pathPoints = useMemo(() => {
+        return getCurvePoints(WAREHOUSE_POS, destination, carrierConfig.type);
+    }, [destination, carrierConfig.type]);
+
     useFrame(() => {
-        if (!groupRef.current) return;
+        if (!groupRef.current || pathPoints.length < 2) return;
 
         // Calculate progress (0 = at warehouse, 1 = at destination)
-        const totalDuration = delivery.deliveryResult?.durationHours || 1;
         const trackingTimeline = delivery.trackingTimeline || [];
         const triggeredCount = trackingTimeline.filter(e => e.triggered).length;
         const progress = Math.max(0, Math.min(1, triggeredCount / Math.max(1, trackingTimeline.length)));
 
-        // Lerp position from warehouse to destination
-        const x = WAREHOUSE_POS[0] + (destination[0] - WAREHOUSE_POS[0]) * progress;
-        const z = WAREHOUSE_POS[2] + (destination[2] - WAREHOUSE_POS[2]) * progress;
-
-        // Height: slight arc for helicopters, ground level for others
-        const arcHeight = carrierConfig.type === "helicopter" ? 2.0 : 0.15;
-        const y = destination[1] + Math.sin(progress * Math.PI) * arcHeight;
-
-        groupRef.current.position.set(x, y, z);
+        // Get position along curved path
+        const pointIdx = progress * (pathPoints.length - 1);
+        const i = Math.floor(pointIdx);
+        const f = pointIdx - i;
+        
+        const p1 = pathPoints[i];
+        const p2 = pathPoints[i + 1] || p1;
+        
+        const pos = new THREE.Vector3().lerpVectors(p1, p2, f);
+        groupRef.current.position.copy(pos);
 
         // Face direction of travel
-        const dx = destination[0] - WAREHOUSE_POS[0];
-        const dz = destination[2] - WAREHOUSE_POS[2];
-        if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
+        const nextIdx = Math.min(pathPoints.length - 1, i + 1);
+        const nextP = pathPoints[nextIdx];
+        const dx = nextP.x - p1.x;
+        const dz = nextP.z - p1.z;
+        if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
             groupRef.current.rotation.y = Math.atan2(dx, dz);
         }
     });
@@ -88,10 +120,8 @@ export function DeliveryPath({ delivery }) {
     );
 
     const points = useMemo(() => {
-        const start = new THREE.Vector3(...WAREHOUSE_POS).add(new THREE.Vector3(0, 0.1, 0));
-        const end = new THREE.Vector3(...destination).add(new THREE.Vector3(0, 0.1, 0));
-        return [start, end];
-    }, [destination]);
+        return getCurvePoints(WAREHOUSE_POS, destination, carrierConfig.type);
+    }, [destination, carrierConfig.type]);
 
     const lineGeo = useMemo(() => new THREE.BufferGeometry().setFromPoints(points), [points]);
 
