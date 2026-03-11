@@ -1,6 +1,7 @@
 import { useGame } from "../context/GameContext";
 import { isWarehouseOpen } from "../game/logic";
 import { WAREHOUSE } from "../game/constants";
+import WarehouseWorkers from "./WarehouseWorkers";
 
 const TERRAIN_ICONS = {
   Urban: "🏙️",
@@ -43,6 +44,12 @@ export default function WarehouseScreen() {
             <span>Capacity: {warehouseQueue.length} / {WAREHOUSE.capacity}</span>
           </div>
         </div>
+
+        {/* Animated workers */}
+        <WarehouseWorkers
+          totalWorkers={WAREHOUSE.workers}
+          busyCount={Math.min(warehouseQueue.length, WAREHOUSE.workers)}
+        />
 
         {/* Incoming orders queue */}
         <div className="panel grow">

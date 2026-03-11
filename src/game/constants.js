@@ -87,5 +87,41 @@ export const LOSE_CONDITIONS = { minFunds: 0, maxFailedShipments: 5 };
 
 // ── Game clock ────────────────────────────────────────────────────────────────
 // Each "tick" = 1 in-game minute. Real-time tick interval in ms.
-export const TICK_INTERVAL_MS = 500;
-export const MINUTES_PER_TICK = 15; // game advances 15 min per tick
+export const TICK_INTERVAL_MS = 1000;   // 1 second per tick (was 500ms)
+export const MINUTES_PER_TICK = 5;      // 5 in-game minutes per tick (was 15)
+
+// Speed multiplier options (accessed via HUD speed controls)
+export const SPEED_OPTIONS = [
+  { label: "1×", multiplier: 1, interval: 1000, minutes: 5 },
+  { label: "2×", multiplier: 2, interval: 500, minutes: 5 },
+  { label: "3×", multiplier: 3, interval: 300, minutes: 5 },
+];
+
+// ── Rush hours (for dynamic pricing) ──────────────────────────────────────────
+export const RUSH_HOURS = [
+  { start: 9, end: 10 },    // morning rush
+  { start: 15, end: 16 },   // afternoon rush
+];
+export const RUSH_MULTIPLIER = 1.5;
+
+// ── Weather ───────────────────────────────────────────────────────────────────
+export const WEATHER_TYPES = [
+  { type: "clear", label: "Clear", icon: "☀️", deliveryMultiplier: 1.0, terrainEffect: null },
+  { type: "rain", label: "Rain", icon: "🌧️", deliveryMultiplier: 1.15, terrainEffect: null },
+  { type: "storm", label: "Storm", icon: "⛈️", deliveryMultiplier: 1.4, terrainEffect: null },
+  { type: "fog", label: "Fog", icon: "🌫️", deliveryMultiplier: 1.25, terrainEffect: "Waterway" },
+  { type: "wind", label: "Wind", icon: "💨", deliveryMultiplier: 1.1, terrainEffect: "Mountain" },
+];
+
+// Weather transition probabilities (from → to)
+export const WEATHER_TRANSITIONS = {
+  clear: { clear: 0.6, rain: 0.2, fog: 0.1, wind: 0.1, storm: 0 },
+  rain: { clear: 0.3, rain: 0.3, fog: 0.05, wind: 0.05, storm: 0.3 },
+  storm: { clear: 0.1, rain: 0.5, fog: 0.1, wind: 0.2, storm: 0.1 },
+  fog: { clear: 0.5, rain: 0.2, fog: 0.2, wind: 0.1, storm: 0 },
+  wind: { clear: 0.4, rain: 0.1, fog: 0.05, wind: 0.3, storm: 0.15 },
+};
+
+// Weather changes every N in-game minutes
+export const WEATHER_CHANGE_INTERVAL = 120; // every 2 hours
+

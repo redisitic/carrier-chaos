@@ -1,4 +1,5 @@
 import { useGame } from "../context/GameContext";
+import { CarrierBadgeAnimated } from "./AnimatedCarrier";
 
 const TERRAIN_ICONS = {
   Urban: "🏙️",
@@ -43,7 +44,8 @@ export default function TrackingScreen() {
                     <div className="tracking-id">
                       <span className="order-id">#{d.id}</span>
                       <span className="carrier-badge" style={{ background: getCarrierColor(d.deliveryResult?.carrierName) }}>
-                        {getCarrierIcon(d.deliveryResult?.carrierName)} {d.deliveryResult?.carrierName}
+                        <CarrierBadgeAnimated carrierName={d.deliveryResult?.carrierName} size={20} />
+                        {" "}{d.deliveryResult?.carrierName}
                       </span>
                     </div>
                     <div className="tracking-meta">
