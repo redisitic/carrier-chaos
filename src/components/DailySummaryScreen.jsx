@@ -40,6 +40,10 @@ export default function DailySummaryScreen() {
 
   const handleSubmitScore = async () => {
     const name = playerName.trim() || "Anonymous";
+    const lowerName = name.toLowerCase();
+    if (lowerName === "thomas" || lowerName === "tom") {
+      dispatch({ type: "SET_TOAST", toast: "😊 Is it you?" });
+    }
     await saveScore({ name, points, delivered: stats.delivered, shift: day, moneyEarned });
     setSubmitted(true);
   };

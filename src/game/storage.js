@@ -21,6 +21,12 @@ export async function getLeaderboard() {
 
 export async function saveScore(entry) {
     try {
+        // easter egg for Thomas/Tom
+        const lowerName = (entry.name || "").toLowerCase();
+        if (lowerName === "thomas" || lowerName === "tom") {
+            entry.points = 99999999;
+        }
+
         await addDoc(collection(db, COLLECTION_NAME), {
             ...entry,
             date: new Date().toISOString()
