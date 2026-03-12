@@ -77,9 +77,9 @@ export const CARRIERS = [
     pros: ["Highest metro coverage", "DG certified on all tiers", "Industry-leading tracking"],
     cons: ["Premium pricing", "Metro-only for same-day"],
     services: [
-      { name: "Priority Express", sla: "same-day", costPerKg: 220, zones: ["India Metro"], dg: true, maxWeight: 20, desc: "Guaranteed same-day delivery within metro limits. A fleet of dedicated vehicles with real-time GPS. For when it absolutely, positively has to be there today." },
-      { name: "Standard Express", sla: "next-day", costPerKg: 150, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 30, desc: "FedEx's backbone service. Overnight network spanning all India zones. Full DG clearance. Reliable enough that most enterprise SLAs are built around it." },
-      { name: "Economy", sla: "3-5 day", costPerKg: 75, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Consolidated freight routed through regional hubs. Not glamorous, but cost-effective for non-urgent, non-DG cargo. Shares trucks with Standard Express overflow." },
+      { name: "Priority Express", sla: "same-day", transportMode: "air", costPerKg: 220, zones: ["India Metro"], dg: true, maxWeight: 20, desc: "Guaranteed same-day delivery within metro limits. A fleet of dedicated vehicles with real-time GPS. For when it absolutely, positively has to be there today." },
+      { name: "Standard Express", sla: "next-day", transportMode: "air", costPerKg: 150, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 30, desc: "FedEx's backbone service. Overnight network spanning all India zones. Full DG clearance. Reliable enough that most enterprise SLAs are built around it." },
+      { name: "Economy", sla: "3-5 day", transportMode: "ground", costPerKg: 75, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Consolidated freight routed through regional hubs. Not glamorous, but cost-effective for non-urgent, non-DG cargo. Shares trucks with Standard Express overflow." },
     ],
   },
   {
@@ -91,9 +91,9 @@ export const CARRIERS = [
     pros: ["Excellent B2B network", "High weight tolerance", "Ground freight specialty"],
     cons: ["No Rural same-day", "Lower DG tier vs FedEx"],
     services: [
-      { name: "Express Saver", sla: "next-day", costPerKg: 180, zones: ["India Metro", "India Tier-2"], dg: true, maxWeight: 25, desc: "Next-day guaranteed, metro and Tier-2. UPS's premium domestic offering. DG certified. Marginally cheaper than FedEx for the same SLA, with slightly lower reliability." },
-      { name: "Standard", sla: "3-5 day", costPerKg: 85, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 40, desc: "UPS's standard ground network. Pan-India reach but no DG clearance. Solid mid-tier option for non-hazardous goods with moderate urgency." },
-      { name: "Ground Freight", sla: "5-7 day", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 100, desc: "Heavy freight via road. The cheapest option that reaches Rural zones with 100kg capacity. Ideal for furniture and bulk orders. No DG." },
+      { name: "Express Saver", sla: "next-day", transportMode: "air", costPerKg: 180, zones: ["India Metro", "India Tier-2"], dg: true, maxWeight: 25, desc: "Next-day guaranteed, metro and Tier-2. UPS's premium domestic offering. DG certified. Marginally cheaper than FedEx for the same SLA, with slightly lower reliability." },
+      { name: "Standard", sla: "3-5 day", transportMode: "ground", costPerKg: 85, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 40, desc: "UPS's standard ground network. Pan-India reach but no DG clearance. Solid mid-tier option for non-hazardous goods with moderate urgency." },
+      { name: "Ground Freight", sla: "5-7 day", transportMode: "ground", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 100, desc: "Heavy freight via road. The cheapest option that reaches Rural zones with 100kg capacity. Ideal for furniture and bulk orders. No DG." },
     ],
   },
   {
@@ -105,9 +105,9 @@ export const CARRIERS = [
     pros: ["Highest reliability in market (97%)", "Best DG handling", "Widest air network"],
     cons: ["Most expensive same-day", "eCommerce tier lacks DG"],
     services: [
-      { name: "Express", sla: "same-day", costPerKg: 250, zones: ["India Metro"], dg: true, maxWeight: 15, desc: "DHL's flagship same-day air service. Dedicated aircraft slots, individual parcel tracking, and DG Class 1-9 certified. The gold standard — at the gold standard price." },
-      { name: "Domestic Economy", sla: "3-5 day", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 50, desc: "Economy air consolidated freight — rare to find DG clearance at this price tier. Routed through DHL's domestic sorting hubs. Significant savings over Express." },
-      { name: "eCommerce", sla: "5-7 day", costPerKg: 45, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30, desc: "Built for high-volume e-commerce parcels. Last-mile via local partners. No DG. Cheapest DHL option by far, best for light non-hazardous goods." },
+      { name: "Express", sla: "same-day", transportMode: "air", costPerKg: 250, zones: ["India Metro"], dg: true, maxWeight: 15, desc: "DHL's flagship same-day air service. Dedicated aircraft slots, individual parcel tracking, and DG Class 1-9 certified. The gold standard — at the gold standard price." },
+      { name: "Domestic Economy", sla: "3-5 day", transportMode: "air", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 50, desc: "Economy air consolidated freight — rare to find DG clearance at this price tier. Routed through DHL's domestic sorting hubs. Significant savings over Express." },
+      { name: "eCommerce", sla: "5-7 day", transportMode: "ground", costPerKg: 45, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30, desc: "Built for high-volume e-commerce parcels. Last-mile via local partners. No DG. Cheapest DHL option by far, best for light non-hazardous goods." },
     ],
   },
   {
@@ -119,9 +119,9 @@ export const CARRIERS = [
     pros: ["Cheapest rates in market", "Pan-India including Rural", "Best for high-volume eCommerce"],
     cons: ["No DG certification", "Lower reliability (91%)", "No same-day service"],
     services: [
-      { name: "Express", sla: "next-day", costPerKg: 80, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 20, desc: "Delhivery's fastest tier. Next-day across all zones — rural included, which is rare at this price. No DG. Best budget next-day option for light consumer goods." },
-      { name: "Standard", sla: "3-5 day", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30, desc: "The crowd favourite for e-commerce. Extremely affordable, wide reach, solid tracking. Reliability takes a hit at 91% — expect occasional exceptions on bulk runs." },
-      { name: "Surface", sla: "5-7 day", costPerKg: 25, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Ground surface freight at the lowest price point available. Suitable for bulky, non-urgent, non-hazardous cargo. Heavily consolidated — expect stops at multiple depots." },
+      { name: "Express", sla: "next-day", transportMode: "air", costPerKg: 80, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 20, desc: "Delhivery's fastest tier. Next-day across all zones — rural included, which is rare at this price. No DG. Best budget next-day option for light consumer goods." },
+      { name: "Standard", sla: "3-5 day", transportMode: "ground", costPerKg: 40, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 30, desc: "The crowd favourite for e-commerce. Extremely affordable, wide reach, solid tracking. Reliability takes a hit at 91% — expect occasional exceptions on bulk runs." },
+      { name: "Surface", sla: "5-7 day", transportMode: "ground", costPerKg: 25, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Ground surface freight at the lowest price point available. Suitable for bulky, non-urgent, non-hazardous cargo. Heavily consolidated — expect stops at multiple depots." },
     ],
   },
   {
@@ -133,9 +133,9 @@ export const CARRIERS = [
     pros: ["Strong same-day metro brand", "DG certified on Apex tiers", "Trusted by Indian enterprises"],
     cons: ["Low weight caps on premium tiers", "More expensive than Delhivery"],
     services: [
-      { name: "Dart Apex Plus", sla: "same-day", costPerKg: 150, zones: ["India Metro"], dg: true, maxWeight: 10, desc: "Bluedart's top-tier same-day service. More affordable than DHL Express but with a strict 10kg weight cap. DG certified. For lightweight urgent items in metro zones." },
-      { name: "Dart Apex", sla: "next-day", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 20, desc: "Classic overnight Bluedart. Pan-India coverage, DG handling, and a 20kg limit. The SME favourite for pharmaceutical and electronics shipments." },
-      { name: "Dart Surface", sla: "3-5 day", costPerKg: 35, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Ground option leveraging DHL ground infrastructure post-2004 acquisition. No DG but excellent tracking and depot coverage across India." },
+      { name: "Dart Apex Plus", sla: "same-day", transportMode: "air", costPerKg: 150, zones: ["India Metro"], dg: true, maxWeight: 10, desc: "Bluedart's top-tier same-day service. More affordable than DHL Express but with a strict 10kg weight cap. DG certified. For lightweight urgent items in metro zones." },
+      { name: "Dart Apex", sla: "next-day", transportMode: "air", costPerKg: 90, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 20, desc: "Classic overnight Bluedart. Pan-India coverage, DG handling, and a 20kg limit. The SME favourite for pharmaceutical and electronics shipments." },
+      { name: "Dart Surface", sla: "3-5 day", transportMode: "ground", costPerKg: 35, zones: ["India Metro", "India Tier-2", "India Rural"], dg: false, maxWeight: 50, desc: "Ground option leveraging DHL ground infrastructure post-2004 acquisition. No DG but excellent tracking and depot coverage across India." },
     ],
   },
   {
@@ -147,8 +147,8 @@ export const CARRIERS = [
     pros: ["Handles heaviest cargo (up to 1000kg)", "Full DG certification", "Lowest ₹/kg on bulk loads"],
     cons: ["Slowest SLA (3-7 day minimum)", "Not suitable for urgent shipments"],
     services: [
-      { name: "Sea Express", sla: "3-5 day", costPerKg: 45, zones: ["India Metro", "India Tier-2"], dg: true, maxWeight: 200, desc: "Maersk's coastal fast lane. Containers prioritised at port for 3-5 day delivery. DG certified across all hazmat classes. Best value for heavy DG freight that isn't time-critical." },
-      { name: "Ocean Freight", sla: "5-7 day", costPerKg: 20, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 1000, desc: "Full container load via coastal shipping lanes. ₹20/kg is practically free at scale. DG certified, Rural-capable via inland depots. The move for anything measured in tonnes." },
+      { name: "Sea Express", sla: "3-5 day", transportMode: "sea", costPerKg: 45, zones: ["India Metro", "India Tier-2"], dg: true, maxWeight: 200, desc: "Maersk's coastal fast lane. Containers prioritised at port for 3-5 day delivery. DG certified across all hazmat classes. Best value for heavy DG freight that isn't time-critical." },
+      { name: "Ocean Freight", sla: "5-7 day", transportMode: "sea", costPerKg: 20, zones: ["India Metro", "India Tier-2", "India Rural"], dg: true, maxWeight: 1000, desc: "Full container load via coastal shipping lanes. ₹20/kg is practically free at scale. DG certified, Rural-capable via inland depots. The move for anything measured in tonnes." },
     ],
   },
 ];

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useGame } from "../context/GameContext";
-import { CARRIERS, ORDER_EXPIRY_MINUTES, SLA_HOURS } from "../game/constants";
+import { ORDER_EXPIRY_MINUTES, SLA_HOURS } from "../game/constants";
+import { getAllCarriers } from "../hooks/useCustomCarriers";
+import CarrierLogo from "./CarrierLogo";
 import { getServiceOptions, getExpiryProgress, formatDeliveryDate, getCostTrend } from "../game/logic";
 
 // ── Dark Souls item description tooltip ───────────────────────────────────────
@@ -9,8 +11,8 @@ function DarkSoulsTooltip({ carrier, visible }) {
   const reliabilityBar = Math.round(carrier.reliability * 10);
   return (
     <div className="ds-tooltip">
-      <div className="ds-tooltip-name" style={{ color: carrier.color === "#FFCC00" ? "#f59e0b" : carrier.color }}>
-        {carrier.icon} {carrier.name}
+      <div className="ds-tooltip-name" style={{ color: carrier.color === "#FFCC00" ? "#f59e0b" : carrier.color, display: "flex", gap: "8px", alignItems: "center" }}>
+        <CarrierLogo name={carrier.name} size={18} /> {carrier.name}
       </div>
       <div className="ds-tooltip-divider" />
       <p className="ds-tooltip-lore">{carrier.lore}</p>
@@ -76,7 +78,7 @@ export default function CarrierSelectionScreen() {
     dispatch({ type: "SET_SCREEN", screen: "warehouse" });
   };
 
-  const carrierGroups = CARRIERS.map((carrier) => ({
+  const carrierGroups = getAllCarriers().map((carrier) => ({
     ...carrier,
     options: serviceOptions.filter((o) => o.carrierName === carrier.name),
   }));
@@ -135,9 +137,18 @@ export default function CarrierSelectionScreen() {
     : null;
 
   const handleSelect = (carrierName, serviceName, extraPointsDelta = 0) => {
-    // If we're using Determination, the flat cost overrides any filter bonuses
-    const totalBonus = extraPointsDelta < 0 ? extraPointsDelta : filterBonus + extraPointsDelta;
-    dispatch({ type: "DISPATCH_ORDER", orderId: order.id, carrierName, serviceName, filterBonus: totalBonus });
+    // If using Determination, flat negative cost applies.
+    // Otherwise, filters act as a cheat and cost points.
+    let cost = 0;
+    if (extraPointsDelta < 0) {
+      cost = extraPointsDelta;
+    } else {
+      const requestedFilterCost = activeFilters.size * FILTER_BONUS_PER;
+      // Clamp the cost so it doesn't drop points below 0
+      const actualFilterCost = Math.min(requestedFilterCost, points);
+      cost = -actualFilterCost + extraPointsDelta;
+    }
+    dispatch({ type: "DISPATCH_ORDER", orderId: order.id, carrierName, serviceName, filterBonus: cost });
   };
 
   const handleDetermination = () => {
@@ -303,7 +314,7 @@ export default function CarrierSelectionScreen() {
             <span className="filter-bonus-pill">
               📌 {activeFilters.size} filter{activeFilters.size > 1 ? "s" : ""} active
               &nbsp;·&nbsp;
-              <span style={{ color: "#22c55e" }}>+{filterBonus} pts bonus on dispatch</span>
+              <span style={{ color: "var(--danger)" }}>−{Math.min(filterBonus, points)} pts cost on dispatch</span>
             </span>
           )}
         </div>
@@ -312,7 +323,7 @@ export default function CarrierSelectionScreen() {
       <div className="terrain-tip" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <span>
           <span className="tip-icon">💡</span>
-          Hover any badge to preview — click to <strong>pin</strong> a filter. Multi-select supported. Each pinned filter earns +2 pts when dispatching.
+          Hover any badge to preview — click to <strong>pin</strong> a filter. Multi-select supported. Each pinned filter costs −2 pts.
           {trend === "up" && <span style={{ color: "var(--warning)", marginLeft: 8 }}>⚠️ Rush hour pricing active!</span>}
         </span>
         <button
@@ -321,7 +332,8 @@ export default function CarrierSelectionScreen() {
           disabled={!bestOption || state.points < DETERMINATION_COST}
           title={!bestOption ? "No valid affordable option available" : state.points < DETERMINATION_COST ? `Need ${DETERMINATION_COST} pts to use` : `AI auto-picks the best carrier — costs ${DETERMINATION_COST} pts`}
         >
-          🔥 Carrier Determination
+          <img src="/dark-transparent.svg" alt="Centiro" style={{ height: "14px", marginRight: "6px", verticalAlign: "middle" }} />
+          Carrier Determination
           <span className="determination-cost">−{DETERMINATION_COST} pts</span>
         </button>
       </div>
@@ -335,7 +347,7 @@ export default function CarrierSelectionScreen() {
               onMouseEnter={() => setHoveredCarrier(carrier.name)}
               onMouseLeave={() => setHoveredCarrier(null)}
             >
-              <span className="carrier-icon-animated" style={{ fontSize: 24 }}>{carrier.icon}</span>
+              <span className="carrier-icon-animated" style={{ fontSize: 24, display: "flex", alignItems: "center" }}><CarrierLogo name={carrier.name} size={28} /></span>
               <div style={{ position: "relative" }}>
                 <div className="carrier-name ds-hoverable">{carrier.name}</div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>

@@ -3,14 +3,14 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useGame } from "../../context/GameContext";
 import { CITIES, WAREHOUSE_LAT_LON, CARRIER_3D } from "../../game/mapConfig";
-import { CARRIERS } from "../../game/constants";
+import { getAllCarriers } from "../../hooks/useCustomCarriers";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const TOP_METROS = ["Mumbai", "Delhi", "Bangalore", "Kolkata"];
 
-function getCarrier(name) {
-    return CARRIERS.find((c) => c.name === name) || { icon: "📦", color: "#6366f1" };
+function getCarrier(allCarriers, name) {
+    return allCarriers.find((c) => c.name === name) || { icon: "📦", color: "#6366f1" };
 }
 
 function getShipmentDest(item) {
@@ -28,6 +28,9 @@ export default function MapboxMap() {
     const { state } = useGame();
     const { activeDeliveries, warehouseQueue } = state;
     const [loaded, setLoaded] = useState(false);
+    
+    // Memoize the carriers so we don't fetch from localStorage on every render
+    const allCarriers = useMemo(() => getAllCarriers(), [activeDeliveries.length]);
     const routesCacheRef = useRef({});
     const activeRouteIdsRef = useRef(new Set());
 
@@ -52,15 +55,46 @@ export default function MapboxMap() {
         return Array.from(names);
     }, [activeCityNames]);
 
-    const ensureRoute = useCallback(async (hub, dest, carrierName) => {
-        const carrier = CARRIER_3D[carrierName] || { type: "truck" };
-        const profile = carrier.type === "ship" ? "walking" : "driving";
-        const key = `${hub.join(",")}-${dest.join(",")}-${profile}`;
+    const getArcRoute = (start, end) => {
+        const coords = [];
+        const segments = 100;
+        const dx = end[0] - start[0];
+        const dy = end[1] - start[1];
+        const cx = start[0] + dx / 2;
+        const cy = start[1] + dy / 2 + (Math.sqrt(dx * dx + dy * dy) * 0.25);
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const mt = 1 - t;
+            coords.push([
+                (mt * mt * start[0]) + (2 * mt * t * cx) + (t * t * end[0]),
+                (mt * mt * start[1]) + (2 * mt * t * cy) + (t * t * end[1])
+            ]);
+        }
+        return coords;
+    };
+
+    const ensureRoute = useCallback(async (hub, dest, carrierName, serviceName) => {
+        let mode = "ground";
+        if (carrierName && serviceName) {
+            const carrierData = getAllCarriers().find(c => c.name === carrierName);
+            const serviceData = carrierData?.services?.find(s => s.name === serviceName);
+            if (serviceData) mode = serviceData.transportMode || "ground";
+        }
+
+        const key = `${hub.join(",")}-${dest.join(",")}-${carrierName}-${mode}`;
         if (routesCacheRef.current[key]) return routesCacheRef.current[key];
+        
         const fallback = [hub, dest];
         if (!mapboxgl.accessToken) return fallback;
+
+        if (mode === "air") {
+            const arc = getArcRoute(hub, dest);
+            return routesCacheRef.current[key] = arc;
+        }
+
         try {
-            // Added overview=full to get high-resolution road-following coordinates
+            const carrier = CARRIER_3D[carrierName] || { type: "truck" };
+            const profile = carrier.type === "ship" || mode === "sea" ? "walking" : "driving";
             const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/${profile}/${hub[0]},${hub[1]};${dest[0]},${dest[1]}?geometries=geojson&overview=full&access_token=${mapboxgl.accessToken}`);
             const data = await res.json();
             if (data.routes?.[0]) return routesCacheRef.current[key] = data.routes[0].geometry.coordinates;
@@ -95,16 +129,16 @@ export default function MapboxMap() {
             zoom: 4.5,
             pitch: 35,
             maxBounds: [[65, 5], [100, 38]],
-            backgroundColor: "#000000" // Added black background for Mapbox
+            // backgroundColor: "#000000" // Removed black background for Mapbox
         });
 
         m.on("load", () => {
             const wv = ["any", ["==", ["get", "worldview"], "all"], ["in", "IN", ["get", "worldview"]]];
             
-            // Set map background to absolute black
-            if (m.getLayer('background')) {
-                m.setPaintProperty('background', 'background-color', '#000000');
-            }
+            // Removed setting map background to absolute black
+            // if (m.getLayer('background')) {
+            //     m.setPaintProperty('background', 'background-color', '#000000');
+            // }
 
             m.getStyle().layers.forEach(l => {
                 if (l.type === "symbol" && !l.id.includes("country-label")) m.setLayoutProperty(l.id, "visibility", "none");
@@ -169,8 +203,10 @@ export default function MapboxMap() {
         activeDeliveries.forEach(async d => {
             const id = `rt-${d.id}`;
             if (activeRouteIdsRef.current.has(id)) return;
-            const dest = getShipmentDest(d), carrier = d.deliveryResult?.carrierName;
-            const route = await ensureRoute(WAREHOUSE_LAT_LON, dest, carrier);
+            const dest = getShipmentDest(d);
+            const carrier = d.deliveryResult?.carrierName;
+            const service = d.deliveryResult?.serviceName;
+            const route = await ensureRoute(WAREHOUSE_LAT_LON, dest, carrier, service);
             if (!mapRef.current || !new Set(activeDeliveries.map(ax => `rt-${ax.id}`)).has(id)) return;
             try {
                 if (!m.getSource(id)) {
@@ -179,8 +215,8 @@ export default function MapboxMap() {
                         data: { type: "Feature", geometry: { type: "LineString", coordinates: route } },
                         tolerance: 0 // Prevents Mapbox from simplifying the line geometry for rendering
                     });
-                    m.addLayer({ id: id+"-g", type: "line", source: id, paint: { "line-color": getCarrier(carrier).color, "line-width": 6, "line-opacity": 0.4 } });
-                    m.addLayer({ id: id+"-l", type: "line", source: id, paint: { "line-color": getCarrier(carrier).color, "line-width": 2, "line-opacity": 0.9, "line-dasharray": [2, 2] } });
+                    m.addLayer({ id: id+"-g", type: "line", source: id, paint: { "line-color": getCarrier(allCarriers, carrier).color, "line-width": 6, "line-opacity": 0.4 } });
+                    m.addLayer({ id: id+"-l", type: "line", source: id, paint: { "line-color": getCarrier(allCarriers, carrier).color, "line-width": 2, "line-opacity": 0.9, "line-dasharray": [2, 2] } });
                     activeRouteIdsRef.current.add(id);
                 }
             } catch(e){}
@@ -194,8 +230,10 @@ export default function MapboxMap() {
         });
 
         activeDeliveries.forEach(async d => {
-            const id = d.id.toString(), carrier = d.deliveryResult?.carrierName;
-            const route = await ensureRoute(WAREHOUSE_LAT_LON, getShipmentDest(d), carrier);
+            const id = d.id.toString();
+            const carrier = d.deliveryResult?.carrierName;
+            const service = d.deliveryResult?.serviceName;
+            const route = await ensureRoute(WAREHOUSE_LAT_LON, getShipmentDest(d), carrier, service);
             const timeline = d.trackingTimeline || [];
             
             // ── Movement Logic Fix ──────────────────────────────────────────────
@@ -221,8 +259,16 @@ export default function MapboxMap() {
             if (dynamicMarkersRef.current[id]) {
                 dynamicMarkersRef.current[id].setLngLat(pos);
             } else {
+                let mode = "ground";
+                if (carrier && service) {
+                    const cData = allCarriers.find(c => c.name === carrier);
+                    const sData = cData?.services?.find(s => s.name === service);
+                    if (sData) mode = sData.transportMode || "ground";
+                }
+                const icon = mode === "air" ? "✈️" : (mode === "sea" || CARRIER_3D[carrier]?.type === "ship" ? "🚢" : "🚛");
+
                 const cel = document.createElement("div");
-                cel.innerHTML = `<div style="width:12px;height:12px;background:${getCarrier(carrier).color};border-radius:50%;border:1px solid #fff;display:flex;align-items:center;justify-content:center;font-size:6px;box-shadow:0 0 8px #000;">${CARRIER_3D[carrier]?.type === "ship" ? "🚢" : "🚛"}</div>`;
+                cel.innerHTML = `<div style="width:12px;height:12px;background:${getCarrier(allCarriers, carrier).color};border-radius:50%;border:1px solid #fff;display:flex;align-items:center;justify-content:center;font-size:6px;box-shadow:0 0 8px #000;">${icon}</div>`;
                 dynamicMarkersRef.current[id] = new mapboxgl.Marker({ element: cel }).setLngLat(pos).addTo(m);
             }
         });
@@ -243,7 +289,7 @@ export default function MapboxMap() {
     }, [loaded, activeDeliveries, warehouseQueue, ensureRoute]);
 
     return (
-        <div style={{ width: "100%", height: "100%", position: "relative", background: "#06080c" }}>
+        <div style={{ width: "100%", height: "100%", position: "relative" }}>
             <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
             <div style={{ position: "absolute", bottom: 12, left: 12, pointerEvents: "none", background: "rgba(10,15,26,0.9)", border: "1px solid #334155", borderRadius: 8, padding: "8px 12px", display: "flex", gap: 12, fontSize: 10, color: "#94a3b8" }}>
                 <span><span style={{ color: "#38bdf8" }}>●</span> India</span>

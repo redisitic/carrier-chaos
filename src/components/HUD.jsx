@@ -3,6 +3,7 @@ import { xpLevel } from "../game/logic";
 import { useAudio } from "../hooks/useAudio";
 import DebugPanel from "./DebugPanel";
 import { useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { RUSH_HOURS, RUSH_MULTIPLIER } from "../game/constants";
 
 function formatTime(gameMinutes) {
@@ -161,8 +162,8 @@ function HudTicker({ weather, day, dailyPoints, stats, warehouseQueue, activeDel
           display: flex;
           align-items: center;
           gap: 10px;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 8px;
           padding: 5px 14px 5px 10px;
           width: 100%;
@@ -223,13 +224,23 @@ export default function HUD() {
   const { money, xp, points, dailyPoints, stats, warehouseQueue, activeDeliveries, gameMinutes, day, running, phase, weather, speedIndex } = state;
   const { level, title } = xpLevel(xp);
   const { muted, toggleMute } = useAudio();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const navItems = [
+    { label: "📦 Warehouse", screen: "warehouse" },
+    { label: "📍 Tracking", screen: "tracking" },
+    { label: "🗺 3D Map", screen: "map" },
+    { label: "📊 Stats", screen: "stats" },
+    { label: "🚚 Carriers", screen: "carriers" },
+  ];
 
   return (
     <div className="hud">
       <div className="hud-top">
+        {/* LEFT: brand + clock */}
         <div className="hud-brand">
-          <span className="hud-logo">📦</span>
-          <span className="hud-title">CarrierChaos</span>
+          <img src="/dark-transparent.svg" alt="Centiro Logo" style={{ height: "24px", objectFit: "contain" }} />
+          <span className="hud-title" style={{ fontFamily: "'Proxima Nova', sans-serif", fontWeight: "bold", marginLeft: "6px" }}>CarrierChaos</span>
         </div>
 
         <div className="hud-clock">
@@ -237,6 +248,7 @@ export default function HUD() {
           <span className="clock-time">{formatTime(gameMinutes)}</span>
         </div>
 
+        {/* Ticker — desktop only */}
         {phase === "playing" && (
           <HudTicker
             weather={weather}
@@ -249,37 +261,24 @@ export default function HUD() {
           />
         )}
 
-        <div className="hud-nav">
-          <button
-            className={`nav-btn ${state.screen === "warehouse" ? "active" : ""}`}
-            onClick={() => dispatch({ type: "SET_SCREEN", screen: "warehouse" })}
-          >
-            Warehouse
-          </button>
-          <button
-            className={`nav-btn ${state.screen === "tracking" ? "active" : ""}`}
-            onClick={() => dispatch({ type: "SET_SCREEN", screen: "tracking" })}
-          >
-            Tracking
-          </button>
-          <button
-            className={`nav-btn ${state.screen === "map" ? "active" : ""}`}
-            onClick={() => dispatch({ type: "SET_SCREEN", screen: "map" })}
-          >
-            3D Map
-          </button>
-          <button
-            className={`nav-btn ${state.screen === "stats" ? "active" : ""}`}
-            onClick={() => dispatch({ type: "SET_SCREEN", screen: "stats" })}
-          >
-            Stats
-          </button>
+        {/* Desktop Nav */}
+        <div className="hud-nav hud-nav-desktop">
+          {navItems.map(({ label, screen }) => (
+            <button
+              key={screen}
+              className={`nav-btn ${state.screen === screen ? "active" : ""}`}
+              onClick={() => dispatch({ type: "SET_SCREEN", screen })}
+            >
+              {label.split(" ").slice(1).join(" ")}
+            </button>
+          ))}
           <button className="nav-btn" onClick={toggleMute} title="Toggle Sound">
             {muted ? "🔇" : "🔊"}
           </button>
         </div>
 
-        <div className="hud-controls">
+        {/* Desktop controls */}
+        <div className="hud-controls hud-controls-desktop">
           {phase === "playing" && (
             <>
               {/* Debug Panel toggle + panel */}
@@ -294,6 +293,47 @@ export default function HUD() {
             </>
           )}
         </div>
+
+        {/* ── Mobile Hamburger Nav — pushed to the far right ── */}
+        <div className="hud-mobile-spacer" />
+        <div className="hud-nav hud-nav-mobile">
+          <button className="nav-btn" onClick={toggleMute} title="Toggle Sound">
+            {muted ? "🔇" : "🔊"}
+          </button>
+          {phase === "playing" && (
+            <>
+              <DebugPanel mobileIconOnly />
+              <button
+                className={`pause-btn ${running ? "" : "paused"}`}
+                style={{ padding: "4px 8px", fontSize: "14px" }}
+                onClick={() => dispatch({ type: "TOGGLE_PAUSE" })}
+              >
+                {running ? "⏸" : "▶"}
+              </button>
+            </>
+          )}
+          <button
+            className="nav-btn hamburger-btn"
+            onClick={() => setMobileNavOpen(o => !o)}
+          >
+            {mobileNavOpen ? "✕" : "☰"}
+          </button>
+          {mobileNavOpen && ReactDOM.createPortal(
+            <div className="mobile-nav-dropdown">
+              {navItems.map(({ label, screen }) => (
+                <button
+                  key={screen}
+                  className={`mobile-nav-item ${state.screen === screen ? "active" : ""}`}
+                  onClick={() => { dispatch({ type: "SET_SCREEN", screen }); setMobileNavOpen(false); }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>,
+            document.body
+          )}
+        </div>
+
       </div>
 
       <div className="hud-bar">

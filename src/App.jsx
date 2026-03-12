@@ -8,6 +8,8 @@ import TrackingScreen from "./components/TrackingScreen";
 import StatsScreen from "./components/StatsScreen";
 import GameOverScreen from "./components/GameOverScreen";
 import DailySummaryScreen from "./components/DailySummaryScreen";
+import CarriersPage from "./components/CarriersPage";
+import PortraitOverlay from "./components/PortraitOverlay";
 const MapboxMap = lazy(() => import("./components/Map3D/MapboxMap"));
 import "./App.css";
 
@@ -47,9 +49,12 @@ function GameRouter() {
         {screen === "tracking" && <TrackingScreen />}
         {screen === "stats" && <StatsScreen />}
         {screen === "daily_summary" && <DailySummaryScreen />}
+        {screen === "carriers" && <CarriersPage />}
         {screen === "map" && (
           <Suspense fallback={<div className="screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading Map...</div>}>
-            <MapboxMap />
+            <div className="screen-map">
+              <MapboxMap />
+            </div>
           </Suspense>
         )}
       </main>
@@ -60,6 +65,7 @@ function GameRouter() {
 export default function App() {
   return (
     <GameProvider>
+      <PortraitOverlay />
       <GameRouter />
     </GameProvider>
   );

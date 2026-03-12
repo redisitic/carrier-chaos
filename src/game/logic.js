@@ -1,6 +1,5 @@
 import {
   STORES,
-  CARRIERS,
   ZONES,
   ZONE_DISTANCE,
   SLA_HOURS,
@@ -12,6 +11,7 @@ import {
   ORDER_EXPIRY_MINUTES,
   XP_LEVELS,
 } from "./constants";
+import { getAllCarriers } from "../hooks/useCustomCarriers";
 import { getWeatherMultiplier } from "./weather";
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -157,6 +157,7 @@ export function resetOrderId() {
  */
 export function getServiceOptions(order) {
   const options = [];
+  const CARRIERS = getAllCarriers();
 
   for (const carrier of CARRIERS) {
     for (const service of carrier.services) {
@@ -229,6 +230,7 @@ export function getCheapestValidCost(order) {
  * ALL combinations now work — wrong choices apply heavy penalties instead of being blocked.
  */
 export function calculateDelivery(order, carrierName, serviceName, gameMinutes, weather) {
+  const CARRIERS = getAllCarriers();
   const carrier = CARRIERS.find((c) => c.name === carrierName);
   const service = carrier.services.find((s) => s.name === serviceName);
   const slaHours = SLA_HOURS[service.sla];

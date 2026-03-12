@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useGame } from "../context/GameContext";
-import { TRACKING_EVENTS, CARRIERS, SLA_HOURS } from "../game/constants";
+import { TRACKING_EVENTS, SLA_HOURS } from "../game/constants";
+import { getAllCarriers } from "../hooks/useCustomCarriers";
+import CarrierLogo from "./CarrierLogo";
 import { formatDeliveryDate } from "../game/logic";
 
 const EVENT_MAP = {};
 TRACKING_EVENTS.forEach((e) => { EVENT_MAP[e.code] = e; });
 
 function getCarrierInfo(name) {
-  return CARRIERS.find((c) => c.name === name) || { icon: "📦", color: "#64748b" };
+  return getAllCarriers().find((c) => c.name === name) || { icon: "📦", color: "#64748b" };
 }
 
 const FILTERS = [
@@ -92,9 +94,9 @@ export default function TrackingScreen() {
                     <span className="ct-ship-id">{shipment.storeIcon} #{shipment.id}</span>
                     <span
                       className="ct-carrier-badge"
-                      style={{ background: carrier.color }}
+                      style={{ background: carrier.color, display: "flex", gap: "6px", alignItems: "center" }}
                     >
-                      {carrier.icon} {shipment.deliveryResult?.carrierName} — {shipment.deliveryResult?.serviceName}
+                      <CarrierLogo name={carrier.name} size={14} /> {shipment.deliveryResult?.carrierName} — {shipment.deliveryResult?.serviceName}
                     </span>
                     <span className="ct-zone-tag">📍 {shipment.zone}</span>
                     <span className={`ct-status-tag ct-tag-${shipment._status}`}>

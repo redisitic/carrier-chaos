@@ -371,14 +371,16 @@ function reducer(state, action) {
 
       let bonusPoints = 0;
       let bonusDailyPoints = 0;
-      if (filterBonus > 0) {
+      if (filterBonus < 0) {
         bonusPoints = filterBonus;
         bonusDailyPoints = filterBonus;
-        newLog = addLog(newLog, `📌 Smart Dispatch +${filterBonus} pts (${filterBonus / 2} filter${filterBonus / 2 > 1 ? "s" : ""} × 2)`, "success");
-      } else if (filterBonus < 0) {
-        bonusPoints = filterBonus;
-        bonusDailyPoints = filterBonus;
-        newLog = addLog(newLog, `🔥 Carrier Determination used — ${filterBonus} pts`, "warning");
+        // Check if it's the exact -50 determination cost to log it differently
+        if (filterBonus === -50) {
+          newLog = addLog(newLog, `🔥 Carrier Determination used ${filterBonus} pts`, "warning");
+        } else {
+          const filterCount = Math.round(Math.abs(filterBonus) / 2);
+          newLog = addLog(newLog, `📌 Smart Dispatch penalty ${filterBonus} pts (${filterCount} filter${filterCount > 1 ? "s" : ""} × 2)`, "warning");
+        }
       }
 
       const newOrders = state.orders.map((o) =>
@@ -404,6 +406,9 @@ function reducer(state, action) {
 
     case "SET_TOAST":
       return { ...state, toast: action.toast ?? null };
+
+    case "ADJUST_POINTS":
+      return { ...state, points: Math.max(0, state.points + action.delta) };
 
     case "TOGGLE_PAUSE":
       return { ...state, running: !state.running };
